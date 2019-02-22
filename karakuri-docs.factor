@@ -28,25 +28,25 @@ HELP: event-none
 HELP: fsm
 { $class-description "fsmタプル。" } ;
 
-HELP: fsm-action
+HELP: trans-action
 { $description "遷移を行うときに実行する処理を記述する。" } ;
 
-HELP: fsm-do
+HELP: state-do
 { $description "状態にあるときに実行する処理を記述する。" } ;
 
 HELP: fsm-end
 { $var-description "終端の状態" } ;
 
-HELP: fsm-entry
+HELP: state-entry
 { $description "状態に入ったときに実行する処理を記述する。" } ;
 
 HELP: fsm-event
 { $class-description "イベントタプル" } ;
 
-HELP: fsm-exit
+HELP: state-exit
 { $description "状態を抜けるときに実行する処理を記述する。" } ;
 
-HELP: fsm-guard?
+HELP: trans-guard?
 { $values
     { "?" boolean }
 }

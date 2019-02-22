@@ -40,6 +40,7 @@ TUPLE: fsm-transition
     { guard?-label   string   initial: "" } ;
 
 TUPLE: fsm-event
+    { info }
     { label          string   initial: "" } ;
 
 
@@ -62,7 +63,7 @@ PRIVATE>
 SYNTAX: FSMS:
     ";"
     [ create-class-in dup define-singleton-class
-      [ <fsm> swap set ]
+      [ <fsm> swap set-global ]
       \ call
       [ suffix! ] tri@
     ] each-token ;
@@ -70,7 +71,7 @@ SYNTAX: FSMS:
 SYNTAX: STATES:
     ";"
     [ create-class-in dup define-singleton-class
-      [ fsm-state new swap set ]
+      [ fsm-state new swap set-global ]
       \ call
       [ suffix! ] tri@
     ] each-token ;
@@ -78,7 +79,7 @@ SYNTAX: STATES:
 SYNTAX: TRANSITIONS:
     ";"
     [ create-class-in dup define-singleton-class
-      [ fsm-transition new swap set ]
+      [ fsm-transition new swap set-global ]
       \ call
       [ suffix! ] tri@
     ] each-token ;
@@ -86,7 +87,7 @@ SYNTAX: TRANSITIONS:
 SYNTAX: EVENTS:
     ";"
     [ create-class-in dup define-singleton-class
-      [ fsm-event  new swap set ]
+      [ fsm-event  new swap set-global ]
       \ call
       [ suffix! ] tri@
     ] each-token ;
@@ -94,17 +95,17 @@ SYNTAX: EVENTS:
 
 <PRIVATE SYMBOL: dispatcher PRIVATE>
 
-HOOK: fsm-entry dispatcher ( -- )
-HOOK: fsm-do dispatcher ( -- )
-HOOK: fsm-exit dispatcher ( -- )
-HOOK: fsm-action dispatcher ( -- )
-HOOK: fsm-guard? dispatcher ( -- ? )
+HOOK: state-entry dispatcher ( -- )
+HOOK: state-do dispatcher ( -- )
+HOOK: state-exit dispatcher ( -- )
+HOOK: trans-action dispatcher ( -- )
+HOOK: trans-guard? dispatcher ( -- ? )
 
-M: word fsm-entry ;
-M: word fsm-do ;
-M: word fsm-exit ;
-M: word fsm-action ;
-M: word fsm-guard? t ;
+M: word state-entry ;
+M: word state-do ;
+M: word state-exit ;
+M: word trans-action ;
+M: word trans-guard? t ;
 
 <PRIVATE
 
@@ -119,12 +120,12 @@ M: word fsm-guard? t ;
 :: transition ( transition-symbol fsm-obj -- )
     transition-symbol
     [ get exit-path>> [
-          dispatcher set fsm-exit
+          dispatcher set state-exit
       ] each ]                 
-    [ dispatcher set fsm-action ]
+    [ dispatcher set trans-action ]
         [ get to-state>> fsm-end = not [
             transition-symbol get entry-path>> [
-                [ dispatcher set fsm-entry ]
+                [ dispatcher set state-entry ]
                 [ dup get super-fsm>> get current-state<< ]
                 [ [ name>> ]
                   [ get super-fsm>> get ]
@@ -140,7 +141,7 @@ M: word fsm-guard? t ;
         start-state {
             [ get super-fsm>> get
               dup start-state>> swap current-state<< ]
-            [ dispatcher set fsm-entry ]
+            [ dispatcher set state-entry ]
             [ [ name>> ]
               [ get super-fsm>> get ]
               bi set-model ]                
@@ -164,7 +165,7 @@ PRIVATE>
         ] [
             fsm-obj current-state>> :> current-state
             current-state 
-            [ dispatcher set fsm-do ]
+            [ dispatcher set state-do ]
             [ get sub-fsms>> [ update ] each ]
             bi
             fsm-obj current-state>> current-state = [ ! no transition
@@ -173,7 +174,7 @@ PRIVATE>
                  transition-symbol get event>>
                  fsm-obj raising-event>> = [
                      transition-symbol dispatcher set
-                     fsm-guard? [
+                     trans-guard? [
                          transition-symbol fsm-obj transition
                          event-none fsm-obj raising-event<<
                      ] when
@@ -250,39 +251,48 @@ PRIVATE>
      
      transition-symbol get to-state>> :> e
      transition-symbol get from-state>> :> s
-     s check-fsm-depth :> s-depth 
-     e check-fsm-depth :> e-depth
-     s get super-fsm>> :> branch-fsm-from!
-     e get super-fsm>> :> branch-fsm-to!
-     V{ s } :> exit-path
-     V{ e } :> entry-path
+     f :> exit-path!
+     f :> entry-path!
+     e s =  [
+         V{ } exit-path!
+         V{ } entry-path!
+     ] [
+         V{ s } exit-path!
+         V{ e } entry-path!
+         s check-fsm-depth :> s-depth 
+         e check-fsm-depth :> e-depth
+         s get super-fsm>> :> branch-fsm-from!
+         e get super-fsm>> :> branch-fsm-to!
+         s exit-path push
+         e entry-path push
      
-     s-depth e-depth > [
-         s-depth e-depth - [ 
+         s-depth e-depth > [
+             s-depth e-depth - [ 
+                 branch-fsm-from exit-path up-fsm-tree 
+                 branch-fsm-from!
+             ] times
+         ] [
+             s-depth e-depth < [
+                 e-depth s-depth - [
+                     branch-fsm-to entry-path up-fsm-tree 
+                     branch-fsm-to!
+                 ] times
+             ] when
+         ] if
+
+         [ branch-fsm-from branch-fsm-to = not ] [
+             branch-fsm-from get super-state>> undefined-state =
+             branch-fsm-to get super-state>> undefined-state = or [
+                 transition-symbol s e no-root-transition
+             ] when
              branch-fsm-from exit-path up-fsm-tree 
              branch-fsm-from!
-         ] times
-     ] [
-         s-depth e-depth < [
-             e-depth s-depth - [
-                 branch-fsm-to entry-path up-fsm-tree 
-                 branch-fsm-to!
-             ] times
-         ] when
+             branch-fsm-to entry-path up-fsm-tree 
+             branch-fsm-to!
+             branch-fsm-to entry-path up-fsm-tree 
+             branch-fsm-to!
+         ] while
      ] if
-
-     [ branch-fsm-from branch-fsm-to = not ] [
-         branch-fsm-from get super-state>> undefined-state =
-         branch-fsm-to get super-state>> undefined-state = or [
-             transition-symbol s e no-root-transition
-         ] when
-         branch-fsm-from exit-path up-fsm-tree 
-         branch-fsm-from!
-         branch-fsm-to entry-path up-fsm-tree 
-         branch-fsm-to!
-         branch-fsm-to entry-path up-fsm-tree 
-         branch-fsm-to!
-     ] while
 
      exit-path transition-symbol get exit-path<<
      entry-path reverse! transition-symbol get entry-path<<
