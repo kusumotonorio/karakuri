@@ -28,14 +28,11 @@ HELP: event-none
 HELP: fsm
 { $class-description "fsmタプル。" } ;
 
-HELP: trans-action
+HELP: transition-action
 { $description "遷移を行うときに実行する処理を記述する。" } ;
 
 HELP: state-do
 { $description "状態にあるときに実行する処理を記述する。" } ;
-
-HELP: fsm-end
-{ $var-description "終端の状態" } ;
 
 HELP: state-entry
 { $description "状態に入ったときに実行する処理を記述する。" } ;
@@ -46,7 +43,7 @@ HELP: fsm-event
 HELP: state-exit
 { $description "状態を抜けるときに実行する処理を記述する。" } ;
 
-HELP: trans-guard?
+HELP: transition-guard?
 { $values
     { "?" boolean }
 }
