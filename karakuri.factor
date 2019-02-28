@@ -3,13 +3,13 @@
 
 USING: accessors constructors kernel sequences arrays words.symbol models  io 
 namespaces locals words strings quotations math classes.parser classes.singleton
-lexer combinators continuations combinators.short-circuit lists
-graphviz graphviz.notation graphviz.render formatting fry prettyprint ;
+lexer combinators continuations combinators.short-circuit lists generic assocs
+classes.tuple graphviz graphviz.notation graphviz.render formatting fry prettyprint ;
 
 IN: karakuri
 
 SYMBOLS: undefined-fsm ;
-SYMBOLS: undefined-state fsm-start ;
+SYMBOLS: undefined-state initial-state ;
 SYMBOLS: undefined-event event-none ;
     
 TUPLE: fsm < model
@@ -17,7 +17,7 @@ TUPLE: fsm < model
     { states         array  initial: { } }
     { transitions    array  initial: { } }
     { start-state    symbol initial: undefined-state }
-    { current-state  symbol initial: fsm-start }
+    { current-state  symbol initial: initial-state }
     { raising-event  symbol initial: event-none } 
     { label          string initial: "" } ;
 
@@ -56,7 +56,7 @@ ERROR: circular-reference-definition
 <PRIVATE
 
 : <fsm> ( -- fsm )
-    fsm-start name>> fsm new-model ;
+    initial-state name>> fsm new-model ;
 
 PRIVATE>
 
@@ -135,7 +135,7 @@ M: word transition-guard? t ;
     ]
     tri ;
 
-:: fsm-start==>start-state ( fsm-obj -- )
+:: initial-state==>start-state ( fsm-obj -- )
     fsm-obj start-state>> :> start-state
     start-state {
         [ get-global super-fsm>> get-global
@@ -145,7 +145,7 @@ M: word transition-guard? t ;
           [ get-global super-fsm>> get-global ]
           bi set-model ]                
         [ get-global sub-fsms>> [
-              get-global fsm-start==>start-state
+              get-global initial-state==>start-state
           ] each ]
     } cleave ;
 
@@ -157,8 +157,8 @@ PRIVATE>
 
 :: update ( fsm-symbol -- )
     fsm-symbol get-global :> fsm-obj
-    fsm-obj current-state>> fsm-start = [
-        fsm-obj fsm-start==>start-state
+    fsm-obj current-state>> initial-state = [
+        fsm-obj initial-state==>start-state
     ] [
         fsm-obj current-state>> :> current-state
         current-state 
@@ -209,6 +209,8 @@ PRIVATE>
         test-fsm get-global super-state>> get-global super-fsm>> test-fsm!
     ] while ;
 
+:: set-sub-fsm ( state-symbol sub-fsm -- )
+    state-symbol sub-fsm 1array set-sub-fsms ;
     
 :: setup-transition ( transition-symbol
                       from-state
@@ -292,59 +294,130 @@ PRIVATE>
      entry-path reverse >array transition-symbol get-global entry-path<<
     ] each ;
 
+ 
+<PRIVATE
+
+:: fsm-label ( fsm-symbol -- str )
+    fsm-symbol get-global label>> :> label
+    label "" = [ fsm-symbol "%s" sprintf ] [ label ] if ;
+
+
+:: state-label ( state-symbol -- str )
+    state-symbol get-global 
+    dup label>>       :> label 
+    dup entry-label>> :> entry-label
+    dup do-label>>    :> do-label
+    exit-label>>      :> exit-label
+    { } clone
+    label "" = 
+    [ state-symbol "%s\n\n" sprintf ] 
+    [ label "%s\n\n" sprintf ] if suffix
+    state-symbol \ state-entry ?lookup-method [
+        entry-label "" = 
+        [ "entry/ *\n" ] 
+        [ entry-label "entry/ %s\n" sprintf ] if suffix
+    ] when
+    state-symbol \ state-do ?lookup-method [
+        do-label "" = 
+        [ "do/ *\n" ] 
+        [ do-label "do/ %s\n" sprintf ] if suffix
+    ] when
+    state-symbol \ state-exit ?lookup-method [
+        exit-label "" = 
+        [ "exit/ *\n" ] 
+        [ exit-label "exit/ %s\n" sprintf ] if suffix
+    ] when
+    "" join ;
+
+
+:: transition-label ( transition-symbol -- str )
+    transition-symbol get-global label>> :> label
+    label "" = [ transition-symbol "%s" sprintf ] [ label ] if ;
+
+
+:: event-label ( transition-symbol -- str )
+    transition-symbol get-global 
+    dup event>>                    :> event-symbol
+    dup event>> get-global label>> :> event-label
+    dup guard?-label>>             :> guard?-label
+    action-label>>                 :> action-label
+    { } clone
+    event-label "" = [ 
+        event-symbol "%s " sprintf 
+    ] [ 
+        event-label "%s " sprintf 
+    ] if 
+    suffix
+    transition-symbol \ transition-guard? ?lookup-method [
+        guard?-label "" = 
+        [ "[ * ] " ] 
+        [ guard?-label "[ %s ] " sprintf ] if suffix
+    ] when
+    transition-symbol \ transition-action ?lookup-method [
+        action-label "" = 
+        [ "/ *" ] 
+        [ action-label "/ %s" sprintf ] if suffix
+    ] when
+    "" join ;
+
 
 :: describe-fsm ( graph fsm-symbol -- graph' )
     graph
-    "true" =newrank
     fsm-symbol <cluster>
-    "same" =rank
+    [graph fsm-symbol fsm-label =label "true" =newrank "max" =rank ];
+
     [node "circle" =shape "rounded,filled" =style "black" =fillcolor
-     "0.2" =width "" =label  ];
-    fsm-symbol "%s-fsm-start" sprintf 1array add-nodes
+     "0.2" =width "" =label ];
+    fsm-symbol "%s-initial-state" sprintf add-node
 
     fsm-symbol get-global states>>
     [| state |
-     [node "box" =shape "rounded,filled" =style "white" =fillcolor "" =width
-      state =label ];
-     state add-node
+     "white" :> color!
+     fsm-symbol get-global current-state>> state = [
+         "gray" color!
+     ] when
+     [node "box" =shape "rounded,filled" =style color =fillcolor ];
+     state [add-node state state-label =label ];
     ] each
-
-    fsm-symbol  =label
+    add
+    
     fsm-symbol get-global states>> [
         get-global sub-fsms>> [
             describe-fsm
         ] each
-    ] each
-    "max" =rank
-    add ;
+    ] each ;
 
-:: describe-super-state-sub-fsms ( fsm-symbol -- )
+
+:: describe-super-state-sub-fsms ( graph fsm-symbol -- graph' )
+    graph
     fsm-symbol get-global states>>
     [| state |
      state get-global sub-fsms>>
      [| fsm |
-      state
-      fsm get-global start-state>>
-      fsm "cluster_%s" sprintf
-      '[ _ _ [-> _ =lhead "back" =dir 
-              "odiamond" =arrowtail "true" =constraint ]; ] call( -- )
+      state "%s" sprintf
+      fsm get-global start-state>> "%s" sprintf
+      [-> fsm "cluster_%s" sprintf =lhead "back" =dir 
+       "odiamond" =arrowtail "true" =constraint ];
       fsm describe-super-state-sub-fsms
      ] each
     ] each ;
+
          
-:: describe-transitions ( fsm-symbol -- )
-    fsm-symbol "%s-fsm-start" sprintf
-    fsm-symbol get-global start-state>>
-    '[ _ _ [-> "false" =constraint ]; ] call( -- )
+:: describe-transitions ( graph fsm-symbol -- graph' )
+    graph
+    fsm-symbol "%s-initial-state" sprintf
+    fsm-symbol get-global start-state>> "%s" sprintf
+    [-> "false" =constraint "10" =weight ];
 
     fsm-symbol get-global transitions>>
     [| transition-symbol |
      transition-symbol get-global
-     [ from-state>> ]
-     [ to-state>> ]
+     [ from-state>> "%s" sprintf ]
+     [ to-state>> "%s" sprintf ]
      bi 
-     transition-symbol get-global event>>
-     '[ _ _ [-> _ =label "false" =constraint ]; ] call( -- )
+     [-> transition-symbol event-label =label 
+      transition-symbol transition-label =taillabel
+      "true" =constraint ];
     ] each
 
     fsm-symbol get-global states>> [
@@ -353,34 +426,89 @@ PRIVATE>
         ] each
     ] each ;
 
-:: preview-fsm ( fsm-symbol size/f -- )
+
+:: (preview-fsm) ( fsm-symbol size/f -- graph )
     <digraph>
-    "true" =compound
-    "TB" =rankdir
-    "true" =newrank
-    "dot" =layout
-    size/f [ =size ] when*
-
-    "false" =newrank
-    [node "circle" =shape "rounded,filled" =style "black" =fillcolor
-     "0.2" =width "" =label  ];
-    fsm-symbol "%s-fsm-start" sprintf add-node
-
-    fsm-symbol get-global states>>
-    [| state |
-     [node "box" =shape "rounded,filled" =style "white" =fillcolor "" =width
-      state =label ];
-     state add-node
-    ] each
-
-    fsm-symbol  =label
-    fsm-symbol get-global states>> [
-        get-global sub-fsms>> [
-            describe-fsm
-        ] each
-    ] each
-
+    [graph 
+           "dot" =layout
+           "TB" =rankdir
+           "true" =compound
+           "true" =newrank
+!           "max" =rank
+           "2.0" =ranksep
+           "0.7" =nodesep
+           size/f [ =size ] when* 
+    ];           
+    fsm-symbol describe-fsm
     fsm-symbol describe-transitions
-    fsm-symbol describe-super-state-sub-fsms
-    
+    fsm-symbol describe-super-state-sub-fsms ;
+
+PRIVATE>
+
+ERROR: label-error ;
+
+<PRIVATE
+
+GENERIC#: (set-labels) 1 ( obj assoc -- )
+
+M:: fsm (set-labels) ( obj assoc -- )
+    assoc keys [
+        { [ "label" = ] } 1|| [
+            label-error
+        ] unless
+    ] each
+    assoc obj set-slots ;
+
+
+M:: fsm-state (set-labels) ( obj assoc -- )
+    assoc keys [
+        { [ "label" = ]
+          [ "entry-label" = ]
+          [ "do-label" = ]
+          [ "exit-label" = ] } 1|| [
+            label-error
+        ] unless
+    ] each
+    assoc obj set-slots ;
+
+
+M:: fsm-transition (set-labels) ( obj assoc -- )
+    assoc keys [
+        { [ "label" = ]
+          [ "action-label" = ]
+          [ "guard?-label" = ] } 1|| [
+            label-error
+        ] unless
+    ] each
+    assoc obj set-slots ;
+
+
+M:: fsm-event (set-labels) ( obj assoc -- )
+    assoc keys [
+        { [ "label" = ] } 1|| [
+            label-error
+        ] unless
+    ] each
+    assoc obj set-slots ;
+
+PRIVATE>
+
+! : $label ( -- str )        "label" ; inline
+! : $entry-label ( -- str )  "entry-label" ; inline
+! : $do-label ( -- str )     "do-label" ; inline
+! : $exit-label ( -- str )   "exit-label" ; inline
+! : $action-label ( -- str ) "action-label" ; inline
+! : $guard?-label ( -- str ) "guard?-label" ; inline
+
+:: set-labels ( symbol assoc -- )
+    symbol get-global assoc (set-labels) ;
+
+
+: preview-fsm ( fsm-symbol size/f -- )
+    (preview-fsm)
     preview ;
+
+
+: preview-fsm-window ( fsm-symbol size/f -- )
+    (preview-fsm)
+    preview-window ;

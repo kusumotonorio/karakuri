@@ -49,7 +49,7 @@ HELP: transition-guard?
 }
 { $description "遷移のガード条件。fのとき遷移しない。" } ;
 
-HELP: fsm-start
+HELP: initial-state
 { $var-description "初期状態" } ;
 
 HELP: fsm-state
