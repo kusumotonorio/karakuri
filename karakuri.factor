@@ -5,7 +5,7 @@ USING: accessors constructors kernel sequences arrays words.symbol models  io
 namespaces locals words strings quotations math classes.parser classes.singleton
 lexer combinators continuations combinators.short-circuit lists generic assocs
 classes.tuple graphviz graphviz.notation graphviz.render graphviz.dot
-formatting fry prettyprint ;
+formatting fry classes prettyprint ;
 
 IN: karakuri
 
@@ -258,6 +258,7 @@ PRIVATE>
     ] while
     v-depth ;
 
+
 :: up-fsm-tree ( fsm-symbol path -- upped-fsm-symbol )
     fsm-symbol get-global super-state>> :> s
     s path push
@@ -318,8 +319,13 @@ PRIVATE>
      entry-path reverse >array transition-symbol get-global entry-path<<
     ] each ;
 
- 
+
 <PRIVATE
+
+SYMBOLS:
+    +graphviz-fontname+ +graphviz-fontsize+
+    +graphviz-transition-label?+ ;
+
 
 :: fsm-label ( fsm-symbol -- str )
     fsm-symbol get-global label>> :> label
@@ -339,17 +345,17 @@ PRIVATE>
     state-symbol \ state-entry ?lookup-method [
         entry-label "" = 
         [ "entry / *\n" ] 
-        [ entry-label "entry/ %s\n" sprintf ] if suffix
+        [ entry-label "entry / %s\n" sprintf ] if suffix
     ] when
     state-symbol \ state-do ?lookup-method [
         do-label "" = 
         [ "do / *\n" ] 
-        [ do-label "do/ %s\n" sprintf ] if suffix
+        [ do-label "do / %s\n" sprintf ] if suffix
     ] when
     state-symbol \ state-exit ?lookup-method [
         exit-label "" = 
         [ "exit / *\n" ] 
-        [ exit-label "exit/ %s\n" sprintf ] if suffix
+        [ exit-label "exit / %s\n" sprintf ] if suffix
     ] when
     "" join ;
 
@@ -388,11 +394,14 @@ PRIVATE>
 :: describe-fsm ( graph fsm-symbol -- graph' )
     graph
     fsm-symbol <cluster>
-    [graph fsm-symbol fsm-label =label "true" =newrank "min" =rank
-     "scalexy" =overlap "50.0" =margin ];
+    [graph fsm-symbol fsm-label =label "20.0" =margin
+     +graphviz-fontname+ get =fontname
+     +graphviz-fontsize+ get =fontsize ];
 
     [node "circle" =shape "rounded,filled" =style "black" =fillcolor
-     "0.2" =width "" =label ];
+     "0.2" =width "" =label
+     +graphviz-fontname+ get =fontname
+     +graphviz-fontsize+ get =fontsize ];
     fsm-symbol "%s-initial-state" sprintf add-node
 
     fsm-symbol get-global states>>
@@ -401,7 +410,9 @@ PRIVATE>
      fsm-symbol get-global current-state>> state = [
          "gray" color!
      ] when
-     [node "box" =shape "rounded,filled" =style color =fillcolor ];
+     [node "box" =shape "rounded,filled" =style color =fillcolor
+      +graphviz-fontname+ get =fontname
+      +graphviz-fontsize+ get =fontsize ];
      state [add-node state state-label =label ];
     ] each
     add
@@ -422,7 +433,9 @@ PRIVATE>
       state "%s" sprintf
       fsm get-global start-state>> "%s" sprintf
       [-> fsm "cluster_%s" sprintf =lhead "back" =dir 
-       "odiamond" =arrowtail "true" =constraint ];
+       "odiamond" =arrowtail "true" =constraint
+       +graphviz-fontname+ get =fontname
+       +graphviz-fontsize+ get =fontsize ];
       fsm describe-super-state-sub-fsms
      ] each
     ] each ;
@@ -432,7 +445,9 @@ PRIVATE>
     graph
     fsm-symbol "%s-initial-state" sprintf
     fsm-symbol get-global start-state>> "%s" sprintf
-    [-> "false" =constraint "true" =labelfloat ];
+    [-> "false" =constraint
+     +graphviz-fontname+ get =fontname
+     +graphviz-fontsize+ get =fontsize ];
 
     fsm-symbol get-global transitions>>
     [| transition-symbol |
@@ -441,8 +456,12 @@ PRIVATE>
      [ to-state>> "%s" sprintf ]
      bi 
      [-> transition-symbol event-label =label 
-      transition-symbol transition-label =taillabel
-      "true" =constraint "12" =fontsize ];
+      +graphviz-transition-label?+ get [
+          transition-symbol transition-label =taillabel
+      ] when
+      "true" =constraint
+      +graphviz-fontname+ get =fontname
+      +graphviz-fontsize+ get =fontsize ];
     ] each
 
     fsm-symbol get-global states>> [
@@ -451,31 +470,46 @@ PRIVATE>
         ] each
     ] each ;
 
+PRIVATE>
 
-:: fsm-graph ( fsm-symbol size/f -- graph )
+SYMBOLS:
+    rankdir: ranksep: nodesep: size:
+    fontname: fontsize: transition-label?: ;
+
+<PRIVATE
+
+:: fsm-graph ( fsm-symbol options/f -- graph )
     <digraph>
-    [graph 
-           "dot" =layout
-           "TB" =rankdir
-           "true" =compound
-           "true" =newrank
-           "2.0" =ranksep
-           "0.7" =nodesep
-           "+25,25" =sep
-           "scalexy" =overlap
-           size/f [ =size ] when*
+    [graph
+     "dot" =layout 
+     "true" =compound
+     options/f
+     dup { [ f = not ] [ first assoc? not ] } 1&& [ 1array ] when
+     { [ rankdir:  swap at [ =rankdir ] [ "LR" =rankdir ] if* ]
+       [ ranksep:  swap at [ =ranksep ] [ "0.3" =ranksep ] if* ]
+       [ nodesep:  swap at [ =nodesep ] [ "0.5" =nodesep ] if* ]
+       [ size:     swap at [ =size ]    when* ]
+       [ fontname: swap at
+         [ +graphviz-fontname+ set ]
+         [ "Times-Roman" +graphviz-fontname+ set ] if* ]
+       [ fontsize: swap at
+         [ +graphviz-fontsize+ set ]
+         [ "12.0" +graphviz-fontsize+ set ] if* ]
+       [ transition-label?: swap at* 
+         [ +graphviz-transition-label?+ set ]
+         [ drop t +graphviz-transition-label?+ set ] if ]
+     } cleave
     ];           
+
     fsm-symbol describe-fsm
     fsm-symbol describe-transitions
     fsm-symbol describe-super-state-sub-fsms ;
 
 PRIVATE>
 
-ERROR: label-error
-    error-label ;
 
-SYMBOLS: $label $entry-label $do-label $exit-label
-         $action-label $guard-label ; 
+SYMBOLS: label: entry-label: do-label: exit-label:
+         action-label: guard-label: ; 
 
 <PRIVATE
 
@@ -488,21 +522,21 @@ SYMBOLS: $label $entry-label $do-label $exit-label
 GENERIC#: (set-labels) 1 ( obj assoc -- )
 
 M:: fsm (set-labels) ( obj assoc -- )
-    assoc $label "label" obj set-label-if-exist ;
+    assoc label: "label" obj set-label-if-exist ;
 
 M:: fsm-state (set-labels) ( obj assoc -- )
-    assoc $label       "label"       obj set-label-if-exist
-    assoc $entry-label "entry-label" obj set-label-if-exist
-    assoc $do-label    "do-label"    obj set-label-if-exist
-    assoc $exit-label  "exit-label"  obj set-label-if-exist ;
+    assoc label:       "label"       obj set-label-if-exist
+    assoc entry-label: "entry-label" obj set-label-if-exist
+    assoc do-label:    "do-label"    obj set-label-if-exist
+    assoc exit-label:  "exit-label"  obj set-label-if-exist ;
 
 M:: fsm-transition (set-labels) ( obj assoc -- )
-    assoc $label        "label"        obj set-label-if-exist
-    assoc $action-label "action-label" obj set-label-if-exist
-    assoc $guard-label  "guard-label"  obj set-label-if-exist ;
+    assoc label:        "label"        obj set-label-if-exist
+    assoc action-label: "action-label" obj set-label-if-exist
+    assoc guard-label:  "guard-label"  obj set-label-if-exist ;
 
 M:: fsm-event (set-labels) ( obj assoc -- )
-    assoc $label "label" obj set-label-if-exist ;
+    assoc label: "label" obj set-label-if-exist ;
     
 PRIVATE>
 
@@ -510,16 +544,20 @@ PRIVATE>
     symbol get-global assoc (set-labels) ;
 
 : set-label ( symbol assoc-elt -- )
+    dup string? [
+        label: swap 2array
+    ] when
     1array set-labels ;
 
 
-: preview-fsm ( fsm-symbol size/f -- )
+: preview-fsm ( fsm-symbol options/f -- )
     fsm-graph preview ;
 
 
-: preview-fsm-window ( fsm-symbol size/f -- )
+: preview-fsm-window ( fsm-symbol options/f -- )
     fsm-graph preview-window ;
 
-:: write-fsm-dot ( fsm-symbol size/f path encording -- )
-    fsm-symbol size/f fsm-graph
+
+:: write-fsm-dot ( fsm-symbol options/f path encording -- )
+    fsm-symbol options/f fsm-graph
     path encording write-dot ;
