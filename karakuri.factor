@@ -14,35 +14,35 @@ SYMBOLS: undefined-state initial-state ;
 SYMBOLS: undefined-event event-none ;
     
 TUPLE: fsm < model
-    { super-state    symbol initial: undefined-state }
-    { states         array  initial: { } }
-    { transitions    array  initial: { } }
-    { start-state    symbol initial: undefined-state }
-    { current-state  symbol initial: initial-state }
-    { raising-event  symbol initial: event-none } 
-    { label          string initial: "" } ;
+    { super-state  symbol initial: undefined-state }
+    { states       array  initial: { } }
+    { transitions  array  initial: { } }
+    { start-state  symbol initial: undefined-state }
+    { state        symbol initial: initial-state }
+    { event        symbol initial: event-none } 
+    { label        string initial: "" } ;
 
 TUPLE: fsm-state
-    { super-fsm      symbol initial: undefined-fsm }
-    { sub-fsms       array  initial: { } }
-    { label          string initial: "" }
-    { entry-label    string initial: "" }
-    { do-label       string initial: "" }
-    { exit-label     string initial: "" } ;
+    { super-fsm    symbol initial: undefined-fsm }
+    { sub-fsms     array  initial: { } }
+    { label        string initial: "" }
+    { entry-label  string initial: "" }
+    { do-label     string initial: "" }
+    { exit-label   string initial: "" } ;
 
 TUPLE: fsm-transition
-    { from-state     symbol initial: undefined-state }
-    { to-state       symbol initial: undefined-state }
-    { entry-path     array  initial: { } }
-    { exit-path      array  initial: { } }
-    { event          symbol initial: undefined-event }
-    { label          string initial: "" }
-    { action-label   string initial: "" } 
-    { guard-label    string initial: "" } ;
+    { from-state   symbol initial: undefined-state }
+    { to-state     symbol initial: undefined-state }
+    { entry-path   array  initial: { } }
+    { exit-path    array  initial: { } }
+    { event        symbol initial: undefined-event }
+    { label        string initial: "" }
+    { action-label string initial: "" } 
+    { guard-label  string initial: "" } ;
 
 TUPLE: fsm-event
     { info }
-    { label          string initial: "" } ;
+    { label        string initial: "" } ;
 
 
 ERROR: no-root-transition
@@ -124,17 +124,18 @@ M: word transition-guard? t ;
 
 
 : current-transitions ( fsm-obj -- transitions )
-    dup current-state>> transitions-for ;
+    dup state>> transitions-for ;
 
 
 : initialise-fsm ( fsm-symbol -- )
     get-global
     {
-        [ current-state>> initial-state = not [
+        [ state>> initial-state = not [
               dispatcher set state-exit
           ] when* ]
-        [ initial-state swap current-state<< ]
-        [ initial-state name>> swap set-model ]                
+        [ dup start-state>> swap state<< ]
+        [ dup start-state>> name>> swap set-model ]
+        [ start-state>> dispatcher set state-entry ]
         [ states>> [
               get-global sub-fsms>> [
                   initialise-fsm
@@ -154,7 +155,7 @@ M: word transition-guard? t ;
                   initialise-fsm 
               ] each ] 
             [ dispatcher set state-entry ]
-            [ dup get-global super-fsm>> get-global current-state<< ]
+            [ dup get-global super-fsm>> get-global state<< ]
             [ [ name>> ]
               [ get-global super-fsm>> get-global ]
               bi set-model ]
@@ -166,7 +167,7 @@ M: word transition-guard? t ;
 :: initial-state==>start-state ( fsm-obj -- )
     fsm-obj start-state>> :> start-state
     start-state
-    [ fsm-obj current-state<< ]
+    [ fsm-obj state<< ]
     [ name>> fsm-obj set-model ]                
     [ dispatcher set state-entry ]
     tri ;
@@ -174,34 +175,34 @@ M: word transition-guard? t ;
 PRIVATE>
 
 : raise-fsm-event ( fsm-symbol event-symbol -- )
-    swap get-global raising-event<< ;
+    swap get-global event<< ;
 
 
 :: update ( fsm-symbol -- )
     fsm-symbol get-global :> fsm-obj
-    fsm-obj current-state>> initial-state = [
+    fsm-obj state>> initial-state = [
         fsm-obj initial-state==>start-state
     ] when
-    fsm-obj current-state>> :> current-state
-    current-state 
+    fsm-obj state>> :> state
+    state 
     [ dispatcher set state-do ]
     [ get-global sub-fsms>> [ update ] each ]
     bi
-    fsm-obj current-state>> current-state = [ ! no transition
-        fsm-obj current-transitions           !  by sub-state
+    fsm-obj state>> state = [  ! no transition by sub-state
+        fsm-obj current-transitions
         [| transition-symbol |
          transition-symbol get-global event>>
-         fsm-obj raising-event>> = [
+         fsm-obj event>> = [
              transition-symbol dispatcher set
              transition-guard? [
                  transition-symbol fsm-obj transition
-                 event-none fsm-obj raising-event<<
+                 event-none fsm-obj event<<
              ] when
          ] when     
         ] each
     ] when
    
-    fsm-obj event-none swap raising-event<< ;
+    fsm-obj event-none swap event<< ;
 
 
 :: set-states ( fsm-symbol state-symbols  -- )
@@ -407,7 +408,7 @@ SYMBOLS:
     fsm-symbol get-global states>>
     [| state |
      "white" :> color!
-     fsm-symbol get-global current-state>> state = [
+     fsm-symbol get-global state>> state = [
          "gray" color!
      ] when
      [node "box" =shape "rounded,filled" =style color =fillcolor
@@ -497,7 +498,7 @@ SYMBOLS:
          [ "12.0" +graphviz-fontsize+ set ] if* ]
        [ transition-label?: swap at* 
          [ +graphviz-transition-label?+ set ]
-         [ drop t +graphviz-transition-label?+ set ] if ]
+         [ drop f +graphviz-transition-label?+ set ] if ]
      } cleave
     ];           
 
