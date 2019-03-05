@@ -1,13 +1,13 @@
 ! Copyright (C) 2019 KUSUMOTO Norio.
 ! See http://factorcode.org/license.txt for BSD license.
 
-USING: accessors constructors kernel sequences arrays words.symbol models  io 
-namespaces locals words strings quotations math classes.parser classes.singleton
-lexer combinators continuations combinators.short-circuit lists generic assocs
-classes.tuple graphviz graphviz.notation graphviz.render graphviz.dot
-formatting fry classes prettyprint ;
+USING: accessors constructors kernel sequences arrays words.symbol models
+       namespaces locals words strings quotations math fry classes.parser 
+       lists generic assocs classes.singleton lexer combinators continuations 
+       combinators.short-circuit classes classes.tuple ; 
 
 IN: karakuri
+
 
 SYMBOLS: undefined-fsm ;
 SYMBOLS: undefined-state initial-state ;
@@ -25,6 +25,7 @@ TUPLE: fsm < model
 TUPLE: fsm-state
     { super-fsm    symbol initial: undefined-fsm }
     { sub-fsms     array  initial: { } }
+    { memo }
     { label        string initial: "" }
     { entry-label  string initial: "" }
     { do-label     string initial: "" }
@@ -106,14 +107,14 @@ SYNTAX: EVENTS:
 HOOK: state-entry dispatcher ( -- )
 HOOK: state-do dispatcher ( -- )
 HOOK: state-exit dispatcher ( -- )
-HOOK: transition-action dispatcher ( -- )
-HOOK: transition-guard? dispatcher ( -- ? )
+HOOK: action dispatcher ( -- )
+HOOK: guard? dispatcher ( -- ? )
 
 M: word state-entry ;
 M: word state-do ;
 M: word state-exit ;
-M: word transition-action ;
-M: word transition-guard? t ;
+M: word action ;
+M: word guard? t ;
 
 <PRIVATE
 
@@ -146,22 +147,25 @@ M: word transition-guard? t ;
 
 :: transition ( transition-symbol fsm-obj -- )
     transition-symbol
-    [ get-global exit-path>> [
-          dispatcher set state-exit
-      ] each ]                 
-    [ dispatcher set transition-action ]
-    [ get-global entry-path>> [
-          { [ get-global sub-fsms>> [ 
-                  initialise-fsm 
-              ] each ] 
+    { [ get-global exit-path>> [
+            dispatcher set state-exit
+        ] each ]                 
+      [ dispatcher set action ]
+      [ get-global entry-path>> [
             [ dispatcher set state-entry ]
             [ dup get-global super-fsm>> get-global state<< ]
             [ [ name>> ]
               [ get-global super-fsm>> get-global ]
               bi set-model ]
-          } cleave
-      ] each ]
-    tri ; 
+            tri
+        ] each ]
+      [ get-global exit-path>> { } = not [ ! not internal transition
+            transition-symbol get-global 
+            to-state>> get-global sub-fsms>> [ 
+                initialise-fsm 
+            ] each 
+        ] when ]
+    } cleave ; 
 
 
 :: initial-state==>start-state ( fsm-obj -- )
@@ -171,6 +175,15 @@ M: word transition-guard? t ;
     [ name>> fsm-obj set-model ]                
     [ dispatcher set state-entry ]
     tri ;
+
+
+: set-event-none ( fsm-symbol -- )
+    get-global dup event-none swap event<<
+    super-state>> dup undefined-state = not [ 
+        get-global super-fsm>> dup undefined-fsm = not [
+            set-event-none
+        ] [ drop ] if
+    ] [ drop ] if ;
 
 PRIVATE>
 
@@ -186,22 +199,21 @@ PRIVATE>
     fsm-obj state>> :> state
     state 
     [ dispatcher set state-do ]
-    [ get-global sub-fsms>> [ update ] each ]
+    [ get-global sub-fsms>> [
+          [ get-global fsm-symbol get-global event>> swap event<< ]
+          [ update ]
+          bi 
+      ] each ]
     bi
-    fsm-obj state>> state = [  ! no transition by sub-state
-        fsm-obj current-transitions
-        [| transition-symbol |
-         transition-symbol get-global event>>
-         fsm-obj event>> = [
-             transition-symbol dispatcher set
-             transition-guard? [
-                 transition-symbol fsm-obj transition
-                 event-none fsm-obj event<<
-             ] when
-         ] when     
-        ] each
-    ] when
-   
+    fsm-obj current-transitions
+    [| transition-symbol |
+     transition-symbol get-global event>> fsm-obj event>> = [
+         transition-symbol dispatcher set guard? [
+             transition-symbol fsm-obj transition
+             fsm-symbol set-event-none
+         ] when
+     ] when     
+    ] each
     fsm-obj event-none swap event<< ;
 
 
@@ -211,6 +223,7 @@ PRIVATE>
     [ first fsm-symbol get-global start-state<< ]
     [ [ fsm-symbol swap get-global super-fsm<< ] each ]
     tri ;
+
 
 :: set-sub-fsms ( state-symbol sub-fsms -- )
     sub-fsms state-symbol get-global sub-fsms<< 
@@ -232,20 +245,29 @@ PRIVATE>
         test-fsm get-global super-state>> get-global super-fsm>> test-fsm!
     ] while ;
 
+
 :: set-sub-fsm ( state-symbol sub-fsm -- )
     state-symbol sub-fsm 1array set-sub-fsms ;
+
     
 :: setup-transition ( transition-symbol
                       from-state
-                      to-state
-                      event-symbol  -- )
+                      to-state/f
+                      event-symbol  --  )
     
     transition-symbol get-global
     [ from-state swap from-state<< ]
     [ event-symbol swap event<< ]
-    [ to-state swap to-state<< ]
+    [ to-state/f dup [ drop undefined-state ] unless swap to-state<< ]
     tri ;
 
+
+:: setup-transitions ( transition-defines -- )
+    transition-defines [ 
+        [ ] clone :> x!    
+        [ x swap suffix x! ] each 
+        x \ setup-transition suffix call( -- ) 
+    ] each ;
 
 <PRIVATE
 
@@ -268,6 +290,7 @@ PRIVATE>
 PRIVATE>
     
 :: set-transitions ( fsm-symbol transition-symbols -- )
+    { } clone fsm-symbol get-global transitions<<
     transition-symbols 
     [| transition-symbol |
      transition-symbol fsm-symbol get-global transitions>> swap suffix
@@ -277,23 +300,28 @@ PRIVATE>
      transition-symbol get-global from-state>> :> s
      V{ } clone :> exit-path!
      V{ } clone :> entry-path!
-     s exit-path push
-     e entry-path push
-     e s = not [
-         s check-fsm-depth :> s-depth 
-         e check-fsm-depth :> e-depth
-         s get-global super-fsm>> :> branch-fsm-from!
-         e get-global super-fsm>> :> branch-fsm-to!
-     
-         s-depth e-depth > [
-             s-depth e-depth - [ 
-                 branch-fsm-from get-global super-state>> e = [
-                     transition-symbol s e direct-descent-transition
-                 ] when
-                 branch-fsm-from exit-path up-fsm-tree 
-                 branch-fsm-from!
-             ] times
-         ] [
+
+     e undefined-state = [ ! internal transition
+         s transition-symbol get-global from-state<<
+         s transition-symbol get-global to-state<<         
+     ] [
+         s exit-path push
+         e entry-path push
+         e s = not [
+             s check-fsm-depth :> s-depth 
+             e check-fsm-depth :> e-depth
+             s get-global super-fsm>> :> branch-fsm-from!
+             e get-global super-fsm>> :> branch-fsm-to!
+             
+             s-depth e-depth > [
+                 s-depth e-depth - [ 
+                     branch-fsm-from get-global super-state>> e = [
+                         transition-symbol s e direct-descent-transition
+                     ] when
+                     branch-fsm-from exit-path up-fsm-tree 
+                     branch-fsm-from!
+                 ] times
+             ] when
              s-depth e-depth < [
                  e-depth s-depth - [
                      branch-fsm-to get-global super-state>> s = [
@@ -303,262 +331,21 @@ PRIVATE>
                      branch-fsm-to!
                  ] times
              ] when
-         ] if
 
-         [ branch-fsm-from branch-fsm-to = not ] [
-             branch-fsm-from get-global super-state>> undefined-state =
-             branch-fsm-to get-global super-state>> undefined-state = or [
-                 transition-symbol s e no-root-transition
-             ] when
-             branch-fsm-from exit-path up-fsm-tree branch-fsm-from!
-             branch-fsm-to entry-path up-fsm-tree branch-fsm-to!
-             branch-fsm-to entry-path up-fsm-tree branch-fsm-to!
-         ] while
-     ] when
+             [ branch-fsm-from branch-fsm-to = not ] [
+                 branch-fsm-from get-global super-state>> undefined-state =
+                 branch-fsm-to get-global super-state>> undefined-state = or [
+                     transition-symbol s e no-root-transition
+                 ] when
+                 branch-fsm-from exit-path up-fsm-tree branch-fsm-from!
+                 branch-fsm-to entry-path up-fsm-tree branch-fsm-to!
+                 branch-fsm-to entry-path up-fsm-tree branch-fsm-to!
+             ] while
+         ] when
+     ] if
 
-     exit-path >array transition-symbol get-global exit-path<<
-     entry-path reverse >array transition-symbol get-global entry-path<<
+     exit-path >array transition-symbol get-global exit-path<< 
+     entry-path reverse >array transition-symbol get-global entry-path<< 
     ] each ;
 
 
-<PRIVATE
-
-SYMBOLS:
-    +graphviz-fontname+ +graphviz-fontsize+
-    +graphviz-transition-label?+ ;
-
-
-:: fsm-label ( fsm-symbol -- str )
-    fsm-symbol get-global label>> :> label
-    label "" = [ fsm-symbol "%s" sprintf ] [ label ] if ;
-
-
-:: state-label ( state-symbol -- str )
-    state-symbol get-global 
-    dup label>>       :> label 
-    dup entry-label>> :> entry-label
-    dup do-label>>    :> do-label
-    exit-label>>      :> exit-label
-    { } clone
-    label "" = 
-    [ state-symbol "%s\n\n\n" sprintf ] 
-    [ label "%s\n\n\n" sprintf ] if suffix
-    state-symbol \ state-entry ?lookup-method [
-        entry-label "" = 
-        [ "entry / *\n" ] 
-        [ entry-label "entry / %s\n" sprintf ] if suffix
-    ] when
-    state-symbol \ state-do ?lookup-method [
-        do-label "" = 
-        [ "do / *\n" ] 
-        [ do-label "do / %s\n" sprintf ] if suffix
-    ] when
-    state-symbol \ state-exit ?lookup-method [
-        exit-label "" = 
-        [ "exit / *\n" ] 
-        [ exit-label "exit / %s\n" sprintf ] if suffix
-    ] when
-    "" join ;
-
-
-:: transition-label ( transition-symbol -- str )
-    transition-symbol get-global label>> :> label
-    label "" = [ transition-symbol "%s" sprintf ] [ label ] if ;
-
-
-:: event-label ( transition-symbol -- str )
-    transition-symbol get-global 
-    dup event>>                    :> event-symbol
-    dup event>> get-global label>> :> event-label
-    dup guard-label>>              :> guard-label
-    action-label>>                 :> action-label
-    { } clone
-    event-label "" = [ 
-        event-symbol "%s " sprintf 
-    ] [ 
-        event-label "%s " sprintf 
-    ] if 
-    suffix
-    transition-symbol \ transition-guard? ?lookup-method [
-        guard-label "" = 
-        [ "[ * ] " ] 
-        [ guard-label "[ %s ] " sprintf ] if suffix
-    ] when
-    transition-symbol \ transition-action ?lookup-method [
-        action-label "" = 
-        [ "/ *" ] 
-        [ action-label "/ %s" sprintf ] if suffix
-    ] when
-    "" join ;
-
-
-:: describe-fsm ( graph fsm-symbol -- graph' )
-    graph
-    fsm-symbol <cluster>
-    [graph fsm-symbol fsm-label =label "20.0" =margin
-     +graphviz-fontname+ get =fontname
-     +graphviz-fontsize+ get =fontsize ];
-
-    [node "circle" =shape "rounded,filled" =style "black" =fillcolor
-     "0.2" =width "" =label
-     +graphviz-fontname+ get =fontname
-     +graphviz-fontsize+ get =fontsize ];
-    fsm-symbol "%s-initial-state" sprintf add-node
-
-    fsm-symbol get-global states>>
-    [| state |
-     "white" :> color!
-     fsm-symbol get-global state>> state = [
-         "gray" color!
-     ] when
-     [node "box" =shape "rounded,filled" =style color =fillcolor
-      +graphviz-fontname+ get =fontname
-      +graphviz-fontsize+ get =fontsize ];
-     state [add-node state state-label =label ];
-    ] each
-    add
-    
-    fsm-symbol get-global states>> [
-        get-global sub-fsms>> [
-            describe-fsm
-        ] each
-    ] each ;
-
-
-:: describe-super-state-sub-fsms ( graph fsm-symbol -- graph' )
-    graph
-    fsm-symbol get-global states>>
-    [| state |
-     state get-global sub-fsms>>
-     [| fsm |
-      state "%s" sprintf
-      fsm get-global start-state>> "%s" sprintf
-      [-> fsm "cluster_%s" sprintf =lhead "back" =dir 
-       "odiamond" =arrowtail "true" =constraint
-       +graphviz-fontname+ get =fontname
-       +graphviz-fontsize+ get =fontsize ];
-      fsm describe-super-state-sub-fsms
-     ] each
-    ] each ;
-
-         
-:: describe-transitions ( graph fsm-symbol -- graph' )
-    graph
-    fsm-symbol "%s-initial-state" sprintf
-    fsm-symbol get-global start-state>> "%s" sprintf
-    [-> "false" =constraint
-     +graphviz-fontname+ get =fontname
-     +graphviz-fontsize+ get =fontsize ];
-
-    fsm-symbol get-global transitions>>
-    [| transition-symbol |
-     transition-symbol get-global
-     [ from-state>> "%s" sprintf ]
-     [ to-state>> "%s" sprintf ]
-     bi 
-     [-> transition-symbol event-label =label 
-      +graphviz-transition-label?+ get [
-          transition-symbol transition-label =taillabel
-      ] when
-      "true" =constraint
-      +graphviz-fontname+ get =fontname
-      +graphviz-fontsize+ get =fontsize ];
-    ] each
-
-    fsm-symbol get-global states>> [
-        get-global sub-fsms>> [
-            describe-transitions
-        ] each
-    ] each ;
-
-PRIVATE>
-
-SYMBOLS:
-    rankdir: ranksep: nodesep: size:
-    fontname: fontsize: transition-label?: ;
-
-<PRIVATE
-
-:: fsm-graph ( fsm-symbol options/f -- graph )
-    <digraph>
-    [graph
-     "dot" =layout 
-     "true" =compound
-     options/f
-     dup { [ f = not ] [ first assoc? not ] } 1&& [ 1array ] when
-     { [ rankdir:  swap at [ =rankdir ] [ "LR" =rankdir ] if* ]
-       [ ranksep:  swap at [ =ranksep ] [ "0.3" =ranksep ] if* ]
-       [ nodesep:  swap at [ =nodesep ] [ "0.5" =nodesep ] if* ]
-       [ size:     swap at [ =size ]    when* ]
-       [ fontname: swap at
-         [ +graphviz-fontname+ set ]
-         [ "Times-Roman" +graphviz-fontname+ set ] if* ]
-       [ fontsize: swap at
-         [ +graphviz-fontsize+ set ]
-         [ "12.0" +graphviz-fontsize+ set ] if* ]
-       [ transition-label?: swap at* 
-         [ +graphviz-transition-label?+ set ]
-         [ drop f +graphviz-transition-label?+ set ] if ]
-     } cleave
-    ];           
-
-    fsm-symbol describe-fsm
-    fsm-symbol describe-transitions
-    fsm-symbol describe-super-state-sub-fsms ;
-
-PRIVATE>
-
-
-SYMBOLS: label: entry-label: do-label: exit-label:
-         action-label: guard-label: ; 
-
-<PRIVATE
-
-:: set-label-if-exist ( assoc label-symbol label-key obj -- )  
-    label-symbol assoc at [
-        label-key swap 2array 1array obj set-slots
-    ] when* ;
-
-
-GENERIC#: (set-labels) 1 ( obj assoc -- )
-
-M:: fsm (set-labels) ( obj assoc -- )
-    assoc label: "label" obj set-label-if-exist ;
-
-M:: fsm-state (set-labels) ( obj assoc -- )
-    assoc label:       "label"       obj set-label-if-exist
-    assoc entry-label: "entry-label" obj set-label-if-exist
-    assoc do-label:    "do-label"    obj set-label-if-exist
-    assoc exit-label:  "exit-label"  obj set-label-if-exist ;
-
-M:: fsm-transition (set-labels) ( obj assoc -- )
-    assoc label:        "label"        obj set-label-if-exist
-    assoc action-label: "action-label" obj set-label-if-exist
-    assoc guard-label:  "guard-label"  obj set-label-if-exist ;
-
-M:: fsm-event (set-labels) ( obj assoc -- )
-    assoc label: "label" obj set-label-if-exist ;
-    
-PRIVATE>
-
-:: set-labels ( symbol assoc -- )
-    symbol get-global assoc (set-labels) ;
-
-: set-label ( symbol assoc-elt -- )
-    dup string? [
-        label: swap 2array
-    ] when
-    1array set-labels ;
-
-
-: preview-fsm ( fsm-symbol options/f -- )
-    fsm-graph preview ;
-
-
-: preview-fsm-window ( fsm-symbol options/f -- )
-    fsm-graph preview-window ;
-
-
-:: write-fsm-dot ( fsm-symbol options/f path encording -- )
-    fsm-symbol options/f fsm-graph
-    path encording write-dot ;

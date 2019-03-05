@@ -28,7 +28,7 @@ HELP: event-none
 HELP: fsm
 { $class-description "fsmタプル。" } ;
 
-HELP: transition-action
+HELP: action
 { $description "遷移を行うときに実行する処理を記述する。" } ;
 
 HELP: state-do
@@ -43,7 +43,7 @@ HELP: fsm-event
 HELP: state-exit
 { $description "状態を抜けるときに実行する処理を記述する。" } ;
 
-HELP: transition-guard?
+HELP: guard?
 { $values
     { "?" boolean }
 }
