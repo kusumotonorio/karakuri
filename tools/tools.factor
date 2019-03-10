@@ -4,8 +4,9 @@
 USING: kernel sequences arrays locals namespaces accessors generic 
        assocs combinators combinators.short-circuit classes.tuple   
        formatting classes prettyprint strings
+       help
        graphviz graphviz.notation graphviz.render graphviz.dot
-       karakuri karakuri.private ;
+       karakuri karakuri.help karakuri.private ;
 
 IN: karakuri.tools
 
@@ -15,32 +16,43 @@ SYMBOLS:
     action-label: guard-label: ; 
 
 SYMBOLS:
-    rankdir: ranksep: nodesep: size:
+    rankdir: ranksep: nodesep: size: labelfloat:
     fontname: fontsize: transition-label?: ;
 
 <PRIVATE
 
 SYMBOLS:
     +graphviz-fontname+ +graphviz-fontsize+
+    +graphviz-labelfloat+
     +graphviz-transition-label?+ ;
 
 
 :: fsm-label ( fsm-symbol -- str )
-    fsm-symbol get-global label>> :> label
-    label "" = [ fsm-symbol "%s" sprintf ] [ label ] if ;
+!    fsm-symbol get-global label>> :> label
+!   label "" = [ fsm-symbol "%s" sprintf ] [ label ] if ;
+    fsm-symbol word-help \ $label of
+    [ fsm-symbol "%s" sprintf ] unless* ;
 
 
 :: transition-label ( transition-symbol -- str )
-    transition-symbol get-global label>> :> label
-    label "" = [ transition-symbol "%s" sprintf ] [ label ] if ;
+!    transition-symbol get-global label>> :> label
+!    label "" = [ transition-symbol "%s" sprintf ] [ label ] if ;
+    transition-symbol word-help \ $label of
+    [ transition-symbol "%s" sprintf ] unless* ;
 
 
 :: event-label ( transition-symbol -- str )
-    transition-symbol get-global 
-    dup event>>                    :> event-symbol
-    dup event>> get-global label>> :> event-label
-    dup guard-label>>              :> guard-label
-    action-label>>                 :> action-label
+!    transition-symbol get-global 
+!    dup event>>                    :> event-symbol
+!    dup event>> get-global label>> :> event-label
+!    dup guard-label>>              :> guard-label
+!    action-label>>                 :> action-label
+    transition-symbol get-global event>> :> event-symbol
+    event-symbol word-help
+    \ $label of [ "" ] unless*           :> event-label
+    transition-symbol word-help dup
+    \ $guard-label of  [ "" ] unless*    :> guard-label
+    \ $action-label of [ "" ] unless*    :> action-label
     { } clone
     event-label "" = [ 
         event-symbol "%s " sprintf 
@@ -48,12 +60,12 @@ SYMBOLS:
         event-label "%s " sprintf 
     ] if 
     suffix
-    transition-symbol \ guard? ?lookup-method [
+    transition-symbol \ trans-guard? ?lookup-method [
         guard-label "" = 
         [ "[ * ] " ] 
         [ guard-label "[ %s ] " sprintf ] if suffix
     ] when
-    transition-symbol \ action ?lookup-method [
+    transition-symbol \ trans-action ?lookup-method [
         action-label "" = 
         [ "/ *" ] 
         [ action-label "/ %s" sprintf ] if suffix
@@ -62,11 +74,18 @@ SYMBOLS:
 
 
 :: state-label ( state-symbol -- str )
-    state-symbol get-global 
-    dup label>>       :> label 
-    dup entry-label>> :> entry-label
-    dup do-label>>    :> do-label
-    exit-label>>      :> exit-label
+!    state-symbol get-global 
+!    dup label>>       :> label 
+!    dup entry-label>> :> entry-label
+!    dup do-label>>    :> do-label
+!    exit-label>>      :> exit-label
+
+    state-symbol word-help 
+    dup \ $label of [ "" ] unless*       :> label 
+    dup \ $entry-label of [ "" ] unless* :> entry-label
+    dup \ $do-label of [ "" ] unless*    :> do-label
+    \ $exit-label of [ "" ] unless*      :> exit-label
+    
     V{ } clone         :> s-label 
     label "" = 
     [ state-symbol "%s\n\n\n" sprintf ] 
@@ -157,6 +176,7 @@ SYMBOLS:
     fsm-symbol "%s-initial-state" sprintf
     fsm-symbol get-global start-state>> "%s" sprintf
     [-> "false" =constraint
+     +graphviz-labelfloat+ get =labelfloat
      +graphviz-fontname+ get =fontname
      +graphviz-fontsize+ get =fontsize ];
 
@@ -172,6 +192,7 @@ SYMBOLS:
               transition-symbol transition-label =taillabel
           ] when
           "true" =constraint
+          +graphviz-labelfloat+ get =labelfloat
           +graphviz-fontname+ get =fontname
           +graphviz-fontsize+ get =fontsize ];
      ] when
@@ -201,6 +222,10 @@ SYMBOLS:
        [ fontsize: swap at
          [ +graphviz-fontsize+ set ]
          [ "12.0" +graphviz-fontsize+ set ] if* ]
+       [ labelfloat: swap at
+         [ +graphviz-labelfloat+ set ]
+         [ "false" +graphviz-fontsize+ set ] if* ]
+       
        [ transition-label?: swap at* 
          [ +graphviz-transition-label?+ set ]
          [ drop f +graphviz-transition-label?+ set ] if ]

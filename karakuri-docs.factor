@@ -26,9 +26,9 @@ HELP: event-none
 { $var-description "イベントが無いことを表すシンボル。" } ;
 
 HELP: fsm
-{ $class-description "fsmタプル。" } ;
+{ $class-description "fsmタプル。" $slot } ;
 
-HELP: action
+HELP: trans-action
 { $description "遷移を行うときに実行する処理を記述する。" } ;
 
 HELP: state-do
@@ -43,7 +43,7 @@ HELP: fsm-event
 HELP: state-exit
 { $description "状態を抜けるときに実行する処理を記述する。" } ;
 
-HELP: guard?
+HELP: trans-guard?
 { $values
     { "?" boolean }
 }
