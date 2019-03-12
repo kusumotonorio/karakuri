@@ -12,9 +12,6 @@ HELP: FSMS:
 HELP: STATES:
 { $description "状態の名称をシングルトンとして定義する。fsm-stateオブジェクトがセットされる。" } ;
 
-HELP: TRANSITIONS:
-{ $description "遷移の名称をシングルトンとして定義する。fsm-transitionオブジェクトがセットされる。" } ;
-
 HELP: circular-reference-definition
 { $values
     { "fsm" "a singleton of fsm" } { "state" "a singleton of state" }
@@ -28,26 +25,11 @@ HELP: event-none
 HELP: fsm
 { $class-description "fsmタプル。" $slot } ;
 
-HELP: trans-action
-{ $description "遷移を行うときに実行する処理を記述する。" } ;
-
-HELP: state-do
-{ $description "状態にあるときに実行する処理を記述する。" } ;
-
-HELP: state-entry
-{ $description "状態に入ったときに実行する処理を記述する。" } ;
-
 HELP: fsm-event
 { $class-description "イベントタプル" } ;
 
 HELP: state-exit
 { $description "状態を抜けるときに実行する処理を記述する。" } ;
-
-HELP: trans-guard?
-{ $values
-    { "?" boolean }
-}
-{ $description "遷移のガード条件。fのとき遷移しない。" } ;
 
 HELP: initial-state
 { $var-description "初期状態" } ;
