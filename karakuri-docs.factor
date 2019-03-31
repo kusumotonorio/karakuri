@@ -71,12 +71,6 @@ HELP: set-transitions
 }
 { $description "fsmに遷移を設定する。" } ;
 
-HELP: setup-transition
-{ $values
-    { "transition-symbol" null } { "from-state" null } { "to-state" null } { "event-symbol" null }
-}
-{ $description "遷移の設定を行う。移行元の状態、移行先の状態、イベントの組み合わせを決める。" } ;
-
 HELP: undefined-event
 { $var-description "イベントが設定されていないことを表すシンボル。" } ;
 

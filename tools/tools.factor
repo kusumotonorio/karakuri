@@ -22,6 +22,8 @@ SYMBOLS:
     +graphviz-labelfloat+
     +sub-fsm?+ ;
 
+SYMBOL: state-members
+
 
 :: fsm-label ( fsm-symbol -- str )
     fsm-symbol word-help \ $label of
@@ -38,14 +40,16 @@ SYMBOLS:
 
     { } clone
 
-    event-label "" = [
-        event "%s" sprintf
-    ] [
-        event-label "%s" sprintf
-    ] if
-    suffix
+    event event-always = not [
+        event-label "" = [
+            event "%s" sprintf
+        ] [
+            event-label "%s" sprintf
+        ] if
+        suffix
+    ] when
 
-    trans-obj guard>> guard-none = not [
+    guard guard-none = not [
         guard-label "" = [
             guard " [ %s ]" sprintf
         ] [
@@ -54,7 +58,7 @@ SYMBOLS:
         suffix
     ] when
 
-    trans-obj action>> action-none = not [
+    action action-none = not [
         action-label "" = [
             action " / %s" sprintf
         ] [
@@ -68,7 +72,7 @@ SYMBOLS:
 
 :: state-label ( state-symbol -- str )
     state-symbol word-help \ $label of [ "" ] unless* :> label
-    V{ } clone         :> s-label
+    V{ } clone :> s-label
 
     label "" =
     [ state-symbol "%s\n\n\n" sprintf ]
@@ -108,7 +112,7 @@ SYMBOLS:
 
     state-symbol get-global transitions>>
     [| trans-obj |
-     trans-obj exit-path>> { } = [ ! internal transition
+     trans-obj exit-chain>> { } = [ ! internal transition
          trans-obj event>> { [ state-entry = not ]
                              [ state-do = not ]
                              [ state-exit = not ] } 1&& [
@@ -138,10 +142,11 @@ SYMBOLS:
      fsm-symbol get-global state>> state = [
          "gray" color!
      ] when
-      [node "box" =shape "rounded,filled" =style color =fillcolor
+     [node "box" =shape "rounded,filled" =style color =fillcolor
       +graphviz-fontname+ get =fontname
       +graphviz-fontsize+ get =fontsize ];
      state [add-node state state-label =label ];
+     state state-members get push
     ] each
     add
 
@@ -185,15 +190,19 @@ SYMBOLS:
     fsm-symbol get-global states>> [
         get-global transitions>>
         [| trans-obj |
-         trans-obj exit-path>> { } = not [
+         trans-obj exit-chain>> { } = not [
+             trans-obj to-state>> state-members get member? not [
+                 [node "box" =shape "rounded,filled" =style
+                      "white" =fillcolor
+                       +graphviz-fontname+ get =fontname
+                       +graphviz-fontsize+ get =fontsize ];
+                  trans-obj to-state>>
+                  [add-node trans-obj to-state>> state-label =label ];
+             ] when
              trans-obj
              [ from-state>> "%s" sprintf ]
              [ to-state>> "%s" sprintf ]
              bi
-!             [node "box" =shape "rounded,filled" =style "white" =fillcolor
-!              +graphviz-fontname+ get =fontname
-!              +graphviz-fontsize+ get =fontsize ];
-
              [-> trans-obj event-label =label
               "true" =constraint
               +graphviz-labelfloat+ get =labelfloat
@@ -213,6 +222,7 @@ SYMBOLS:
 
 
 :: fsm-graph ( fsm-symbol options/f -- graph )
+    V{ } clone state-members set
     <digraph>
     [graph
      "dot" =layout
