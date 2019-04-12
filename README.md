@@ -1,11 +1,7 @@
 # karakuri
-![karakuri](/images/karakuri.png)
-
-
-
-
-
-
+<div align="center">
+<img src="/images/karakuri.png" title="からくり">
+</div>
 
 
 
