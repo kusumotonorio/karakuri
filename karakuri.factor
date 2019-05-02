@@ -10,13 +10,17 @@ combinators.short-circuit classes classes.tuple ;
 
 IN: karakuri
 
+<PRIVATE
 
 SYMBOLS: undefined-fsm ;
 SYMBOLS: undefined-state initial-state ;
-SYMBOLS: undefined-event event-none event-always ;
-SYMBOLS: state-entry state-exit state-do ;
+SYMBOLS: undefined-event event-always ;
 SYMBOLS: guard-none action-none ;
 
+PRIVATE>
+
+SYMBOL: event-none
+SYMBOLS: state-entry state-exit state-do ;
 
 TUPLE: fsm < model
     { super-state    symbol initial: undefined-state }
@@ -25,34 +29,28 @@ TUPLE: fsm < model
     { state          symbol initial: initial-state }
     { event          symbol initial: event-none }
     { memory-type?          initial: f }
-    { transitioned?         initial: f }
-    { info                  initial: f }
-    { memo                  initial: f } ;
+    { transitioned?         initial: f } ;
 
 
 TUPLE: fsm-state
     { super-fsm    symbol initial: undefined-fsm }
     { sub-fsms     array  initial: { } }
-    { transitions  array  initial: { } }
-    { info                initial: f }
-    { memo                initial: f } ;
+    { transitions  array  initial: { } } ;
 
 
 TUPLE: fsm-transition
+    { fsm          symbol initial: undefined-fsm }
     { from-state   symbol initial: undefined-state }
     { to-state     symbol initial: undefined-state }
     { entry-chain  array  initial: { } }
     { exit-chain   array  initial: { } }
     { event        symbol initial: undefined-event }
     { guard        word   initial: guard-none }
-    { action       word   initial: action-none }
-    { info                initial: f }
-    { memo                initial: f } ;
+    { action       word   initial: action-none } ;
 
 
 TUPLE: fsm-event
-    { info }
-    { memo } ;
+    { info } ;
 
 
 ERROR: no-root-transition
@@ -106,7 +104,7 @@ SYNTAX: EVENTS:
     ] each-token ;
 
 
-: set-memory-type ( fsm-symabol ? -- )
+: set-memory-type ( fsm-symbol ? -- )
     swap get-global memory-type?<< ; inline
 
 
@@ -146,13 +144,14 @@ SYNTAX: EVENTS:
 <PRIVATE
 
 :: setup-transition ( from-state trans-define -- trans-obj )
-    from-state trans-define first4
+    from-state dup trans-define first4
     fsm-transition new
     swap dup [ drop action-none ] unless >>action
     swap dup [ drop guard-none ] unless >>guard
     swap dup [ drop event-always ] unless >>event
     swap dup [ drop undefined-state ] unless >>to-state
-    swap >>from-state ;
+    swap >>from-state
+    swap get-global super-fsm>> >>fsm ;
 
 
 :: check-fsm-depth ( state-symbol -- n )
@@ -245,14 +244,14 @@ PRIVATE>
 
 :: exec-trans-action ( trans-obj -- )
     trans-obj action>> action-none = not [
-        trans-obj action>> execute( -- )
+        trans-obj dup action>> execute( trans -- )
     ] when ;
 
 
 :: exec-trans-guard? ( trans-obj -- ? )
     trans-obj guard>> guard-none =
     [ t ] [
-        trans-obj guard>> execute( -- ? )
+        trans-obj dup guard>> execute( trans -- ? )
     ] if ;
 
 
