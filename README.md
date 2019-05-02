@@ -186,9 +186,7 @@ The state-entry, state-do, and state-exit are special events, each representing 
 
 If you visualize this FSM again, you will see the new additions.
 
-```
-USE: karakuri.tools
- 
+``` 
 FSM1 { { sub-fsm: t } } preview-fsm
 ```
 

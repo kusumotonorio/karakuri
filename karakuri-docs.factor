@@ -213,21 +213,21 @@ SYMBOLS: wait-counter ;
 : S1-do ( trans -- ) drop                    wait-counter get \"S1:do(%d) \" printf
    wait-counter inc
     wait-counter get 5 > [
-        event1 next-event set
+        E1 next-event set
     ] when ;
 
 : S1-exit ( trans -- ) drop                  \"S1:exit \" write ;
 
 : S2-entry ( trans -- ) drop                 \"S2:entry \" write
     switch off 
-    event2 next-event set ;
+    E2 next-event set ;
 
 : S2-do ( trans -- ) drop                    \"S2:do \" write ;
 
 : S2-exit ( trans -- ) drop                  \"S2:exit \" write ;
 
 : S3-entry ( trans -- ) drop                 \"S3:entry \" write
-    event3 next-event set ;
+    E3 next-event set ;
 
 : S3-do ( trans -- ) drop                    \"S3:do \" write ;
 
@@ -236,7 +236,7 @@ SYMBOLS: wait-counter ;
 
 : S1-1-entry ( trans -- ) drop               \"S1-1:entry \" write
     next-event get event-none = [
-        event4 next-event set
+        E4 next-event set
     ] when ;
 
 : S1-1-do ( trans -- ) drop                  \"S1-1:do \" write ;
@@ -245,7 +245,7 @@ SYMBOLS: wait-counter ;
 
 : S1-2-entry ( trans -- ) drop               \"S1-2:entry \" write
     next-event get event-none = [
-        event5 next-event set
+        E5 next-event set
     ] when ;
 
 : S1-2-do ( trans -- ) drop                  \"S1-2:do \" write ;
@@ -334,15 +334,13 @@ The state-entry, state-do, and state-exit are special events, each representing 
 If you visualize this FSM again, you will see the new additions.
 "
 { $code
-"USE: karakuri.tools
- 
-FSM1 { { sub-fsm: t } } preview-fsm" }
+"FSM1 { { sub-fsm: t } } preview-fsm" }
 "
 Drive state machines."
 { $code
 "event-none next-event set
     
-40 [
+10 [
     FSM1 update nl
     FSM1 next-event get raise-fsm-event
     event-none next-event set
