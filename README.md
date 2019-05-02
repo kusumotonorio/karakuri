@@ -185,7 +185,7 @@ However, all transitions require the guard condition of the third element to be 
 
 The fourth element is the action performed during the transition. If this is written as f, it is interpreted as having no action.
 
-The state-entry, state-do, and state-exit are special events, each representing when a state is entered, while it is in, and when it is exited.
+The ```state-entry```, ```state-do```, and ```state-exit``` are special events, each representing when a state is entered, while it is in, and when it is exited.
 
 If you visualize this FSM again, you will see the new additions.
 
