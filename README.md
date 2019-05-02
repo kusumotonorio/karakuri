@@ -203,7 +203,7 @@ FSM1 { { sub-fsm: t } } preview-fsm
 ```
 event-none next-event set
     
-10 [
+20 [
     FSM1 update nl
     FSM1 next-event get raise-fsm-event
     event-none next-event set
@@ -221,4 +221,14 @@ S2:do S2:exit (S2 -> S1) S1:entry S1-1:entry
 S1:do(1) S1-1:do S1-1:exit (S1-1 -> S1-2) S1-2:entry 
 S1:do(2) S1-2:do S1-2:exit (S1-2 -> S1-1) S1-1:entry 
 S1:do(3) S1-1:do S1-1:exit (S1-1 -> S1-2) S1-2:entry 
+S1:do(4) S1-2:do S1-2:exit (S1-2 -> S1-1) S1-1:entry 
+S1:do(5) S1-1:do S1-1:exit (S1-1 -> S1-2) S1-2:entry 
+S1:do(6) S1-2:do S1-2:exit S1:exit (S1 -> S3) S3:entry 
+S3:do S3:exit (S3 -> S1-2) S1:entry S1-2:entry 
+S1:do(1) S1-2:do S1-2:exit (S1-2 -> S1-1) S1-1:entry 
+S1:do(2) S1-1:do S1-1:exit (S1-1 -> S1-2) S1-2:entry 
+S1:do(3) S1-2:do S1-2:exit (S1-2 -> S1-1) S1-1:entry 
+S1:do(4) S1-1:do S1-1:exit (S1-1 -> S1-2) S1-2:entry 
+S1:do(5) S1-2:do S1-2:exit (S1-2 -> S1-1) S1-1:entry 
+S1:do(6) S1-1:do S1-1:exit S1:exit (S1 - >S2) S2:entry
 ```

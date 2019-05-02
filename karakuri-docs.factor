@@ -347,7 +347,7 @@ Drive state machines."
 { $code
 "event-none next-event set
     
-10 [
+20 [
     FSM1 update nl
     FSM1 next-event get raise-fsm-event
     event-none next-event set
