@@ -3,15 +3,15 @@
 </div>
 
 
-# karakuri
+# Karakuri
 
 A hierarchical finite state machine library for Factor
 
 
 
-Usage:
+## Usage
 
-Create state machines, states and events.
+### Create state machines, states and events.
 
 ```
 USE: karakuri
@@ -21,7 +21,7 @@ STATES: S1 S2 S3 S1-1 S1-2 ;
 EVENTS: E1 E2 E3 E4 E5 ;
 ```
 
-Assemble the machines and the states.
+### Assemble the machines and the states.
 
 ```
 FSM1 { S1 S2 S3 } set-states     ! The state written at first becomes the start state.
@@ -37,9 +37,15 @@ USE: karakuri.tools
 FSM1 { { sub-fsm: t } } preview-fsm
 ```
 
+<div align="center">
+<img src="/images/karakuri-usage1.png" >
+</div>
+
+
+
 The state machine in karakuri is quite similar to that in UML. However, Graphviz does not render state hierarchies well, so it has its own representation of hierarchy.
 
-Wrie event handlers.
+### Wrie event handlers.
 
 ```
 USING: kernel accessors namespaces arrays io math formatting
@@ -113,7 +119,7 @@ SYMBOLS: wait-counter ;
 : S1-2->S1-1-action ( trans -- ) drop        "(S1-2 -> S1-1) " write ;
 ```
 
-Set transitions to states.
+### Set transitions to states.
 
 ```
 ! from   to  event          guard condition  action
@@ -169,8 +175,13 @@ set-transitions
 ```
 
 If you write f for the first element of an array that represents information about a transition, it represents an internal transition. If it is the same as the from state, it represents a self transition.
-The second element is the event where the transition occurs. If you write this as f, it means unconditional. However, all transitions require the guard condition of the third element to be met. If the third element is f, there is no guard condition.
+
+The second element is the event where the transition occurs. If you write this as f, it means unconditional.
+
+However, all transitions require the guard condition of the third element to be met. If the third element is f, there is no guard condition.
+
 The fourth element is the action performed during the transition. If this is written as f, it is interpreted as having no action.
+
 The state-entry, state-do, and state-exit are special events, each representing when a state is entered, while it is in, and when it is exited.
 
 If you visualize this FSM again, you will see the new additions.
@@ -181,7 +192,12 @@ USE: karakuri.tools
 FSM1 { { sub-fsm: t } } preview-fsm
 ```
 
-Drive state machines.
+<div align="center">
+<img src="/images/karakuri-usage2.png" >
+</div>
+
+
+### Drive state machines.
 
 ```
 event-none next-event set
