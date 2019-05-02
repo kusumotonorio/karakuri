@@ -61,21 +61,21 @@ SYMBOLS: wait-counter ;
 : S1-do ( trans -- ) drop                    wait-counter get "S1:do(%d) " printf
    wait-counter inc
     wait-counter get 5 > [
-        event1 next-event set
+        E1 next-event set
     ] when ;
 
 : S1-exit ( trans -- ) drop                  "S1:exit " write ;
 
 : S2-entry ( trans -- ) drop                 "S2:entry " write
     switch off 
-    event2 next-event set ;
+    E2 next-event set ;
 
 : S2-do ( trans -- ) drop                    "S2:do " write ;
 
 : S2-exit ( trans -- ) drop                  "S2:exit " write ;
 
 : S3-entry ( trans -- ) drop                 "S3:entry " write
-    event3 next-event set ;
+    E3 next-event set ;
 
 : S3-do ( trans -- ) drop                    "S3:do " write ;
 
@@ -84,7 +84,7 @@ SYMBOLS: wait-counter ;
 
 : S1-1-entry ( trans -- ) drop               "S1-1:entry " write
     next-event get event-none = [
-        event4 next-event set
+        E4 next-event set
     ] when ;
 
 : S1-1-do ( trans -- ) drop                  "S1-1:do " write ;
@@ -93,7 +93,7 @@ SYMBOLS: wait-counter ;
 
 : S1-2-entry ( trans -- ) drop               "S1-2:entry " write
     next-event get event-none = [
-        event5 next-event set
+        E5 next-event set
     ] when ;
 
 : S1-2-do ( trans -- ) drop                  "S1-2:do " write ;
@@ -202,9 +202,22 @@ FSM1 { { sub-fsm: t } } preview-fsm
 ```
 event-none next-event set
     
-40 [
+10 [
     FSM1 update nl
     FSM1 next-event get raise-fsm-event
     event-none next-event set
 ] times
+```
+
+```
+S1:entry S1:do(1) S1-1:entry S1-1:do 
+S1:do(2) S1-1:do S1-1:exit (S1-1 -> S1-2) S1-2:entry 
+S1:do(3) S1-2:do S1-2:exit (S1-2 -> S1-1) S1-1:entry 
+S1:do(4) S1-1:do S1-1:exit (S1-1 -> S1-2) S1-2:entry 
+S1:do(5) S1-2:do S1-2:exit (S1-2 -> S1-1) S1-1:entry 
+S1:do(6) S1-1:do S1-1:exit S1:exit (S1 - >S2) S2:entry 
+S2:do S2:exit (S2 -> S1) S1:entry S1-1:entry 
+S1:do(1) S1-1:do S1-1:exit (S1-1 -> S1-2) S1-2:entry 
+S1:do(2) S1-2:do S1-2:exit (S1-2 -> S1-1) S1-1:entry 
+S1:do(3) S1-1:do S1-1:exit (S1-1 -> S1-2) S1-2:entry 
 ```
