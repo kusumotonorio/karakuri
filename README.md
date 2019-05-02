@@ -3,9 +3,9 @@
 </div>
 
 
-# Karakuri
+# karakuri
 
-A hierarchical finite state machine library for Factor
+karakuri is a hierarchical finite state machine library for Factor.
 
 
 
