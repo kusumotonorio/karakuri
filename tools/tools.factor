@@ -18,9 +18,9 @@ SYMBOLS:
 <PRIVATE
 
 SYMBOLS:
-    +graphviz-fontname+ +graphviz-fontsize+
-    +graphviz-labelfloat+
-    +sub-fsm?+ ;
+    *graphviz-fontname* *graphviz-fontsize*
+    *graphviz-labelfloat*
+    *sub-fsm?* ;
 
 SYMBOL: state-members
 
@@ -127,13 +127,13 @@ SYMBOL: state-members
     graph
     fsm-symbol <cluster>
     [graph fsm-symbol fsm-label =label "20.0" =margin
-     +graphviz-fontname+ get =fontname
-     +graphviz-fontsize+ get =fontsize ];
+     *graphviz-fontname* get =fontname
+     *graphviz-fontsize* get =fontsize ];
 
     [node "circle" =shape "rounded,filled" =style "black" =fillcolor
      "0.2" =width "" =label
-     +graphviz-fontname+ get =fontname
-     +graphviz-fontsize+ get =fontsize ];
+     *graphviz-fontname* get =fontname
+     *graphviz-fontsize* get =fontsize ];
     fsm-symbol "%s-initial-state" sprintf add-node
 
     fsm-symbol get-global states>>
@@ -143,14 +143,14 @@ SYMBOL: state-members
          "gray" color!
      ] when
      [node "box" =shape "rounded,filled" =style color =fillcolor
-      +graphviz-fontname+ get =fontname
-      +graphviz-fontsize+ get =fontsize ];
+      *graphviz-fontname* get =fontname
+      *graphviz-fontsize* get =fontsize ];
      state [add-node state state-label =label ];
      state state-members get push
     ] each
     add
 
-    +sub-fsm?+ get [
+    *sub-fsm?* get [
       fsm-symbol get-global states>> [
           get-global sub-fsms>> [
               describe-fsm
@@ -161,7 +161,7 @@ SYMBOL: state-members
 
 :: describe-super-state-sub-fsms ( graph fsm-symbol -- graph' )
     graph
-    +sub-fsm?+ get [
+    *sub-fsm?* get [
     fsm-symbol get-global states>>
     [| state |
      state get-global sub-fsms>>
@@ -170,8 +170,8 @@ SYMBOL: state-members
       fsm get-global start-state>> "%s" sprintf
       [-> fsm "cluster_%s" sprintf =lhead "back" =dir
        "odiamond" =arrowtail "true" =constraint
-       +graphviz-fontname+ get =fontname
-       +graphviz-fontsize+ get =fontsize ];
+       *graphviz-fontname* get =fontname
+       *graphviz-fontsize* get =fontsize ];
       fsm describe-super-state-sub-fsms
      ] each
     ] each
@@ -183,9 +183,9 @@ SYMBOL: state-members
     fsm-symbol "%s-initial-state" sprintf
     fsm-symbol get-global start-state>> "%s" sprintf
     [-> "false" =constraint
-     +graphviz-labelfloat+ get =labelfloat
-     +graphviz-fontname+ get =fontname
-     +graphviz-fontsize+ get =fontsize ];
+     *graphviz-labelfloat* get =labelfloat
+     *graphviz-fontname* get =fontname
+     *graphviz-fontsize* get =fontsize ];
 
     fsm-symbol get-global states>> [
         get-global transitions>>
@@ -194,8 +194,8 @@ SYMBOL: state-members
              trans-obj to-state>> state-members get member? not [
                  [node "box" =shape "rounded,filled" =style
                       "white" =fillcolor
-                       +graphviz-fontname+ get =fontname
-                       +graphviz-fontsize+ get =fontsize ];
+                       *graphviz-fontname* get =fontname
+                       *graphviz-fontsize* get =fontsize ];
                   trans-obj to-state>>
                   [add-node trans-obj to-state>> state-label =label ];
              ] when
@@ -205,14 +205,14 @@ SYMBOL: state-members
              bi
              [-> trans-obj event-label =label
               "true" =constraint
-              +graphviz-labelfloat+ get =labelfloat
-              +graphviz-fontname+ get =fontname
-              +graphviz-fontsize+ get =fontsize ];
+              *graphviz-labelfloat* get =labelfloat
+              *graphviz-fontname* get =fontname
+              *graphviz-fontsize* get =fontsize ];
          ] when
         ] each
     ] each
 
-    +sub-fsm?+ get [
+    *sub-fsm?* get [
     fsm-symbol get-global states>> [
         get-global sub-fsms>> [
             describe-transitions
@@ -234,17 +234,17 @@ SYMBOL: state-members
        [ nodesep:  swap at [ =nodesep ] [ "0.5" =nodesep ] if* ]
        [ size:     swap at [ =size ]    when* ]
        [ fontname: swap at
-         [ +graphviz-fontname+ set ]
-         [ "sans-serif" +graphviz-fontname+ set ] if* ]
+         [ *graphviz-fontname* set ]
+         [ "sans-serif" *graphviz-fontname* set ] if* ]
        [ fontsize: swap at
-         [ +graphviz-fontsize+ set ]
-         [ "12.0" +graphviz-fontsize+ set ] if* ]
+         [ *graphviz-fontsize* set ]
+         [ "12.0" *graphviz-fontsize* set ] if* ]
        [ labelfloat: swap at
-         [ +graphviz-labelfloat+ set ]
-         [ "false" +graphviz-fontsize+ set ] if* ]
+         [ *graphviz-labelfloat* set ]
+         [ "false" *graphviz-fontsize* set ] if* ]
        [ sub-fsm: swap at*
-           [ +sub-fsm?+ set ]
-           [ drop f +sub-fsm?+ set ] if ]
+           [ *sub-fsm?* set ]
+           [ drop f *sub-fsm?* set ] if ]
      } cleave
     ];
 
