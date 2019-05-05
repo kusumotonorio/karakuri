@@ -235,7 +235,7 @@ SYMBOL: state-members
        [ size:     swap at [ =size ]    when* ]
        [ fontname: swap at
          [ +graphviz-fontname+ set ]
-         [ "Times-Roman" +graphviz-fontname+ set ] if* ]
+         [ "sans-serif" +graphviz-fontname+ set ] if* ]
        [ fontsize: swap at
          [ +graphviz-fontsize+ set ]
          [ "12.0" +graphviz-fontsize+ set ] if* ]

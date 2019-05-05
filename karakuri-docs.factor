@@ -142,7 +142,7 @@ The state-entry, state-do, and state-exit are special events, each representing 
 Example:
 " }
 
-{ $example
+{ $code
   "! from   to  event          guard condition  action
 
 S1 {
