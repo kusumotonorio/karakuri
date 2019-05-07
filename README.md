@@ -54,8 +54,8 @@ USING: kernel accessors namespaces arrays io math formatting
 tools.continuations ;
 
 SYMBOL: next-event         event-none next-event set
-SYMBOLS: switch ;          switch on
-SYMBOLS: wait-counter ;
+SYMBOL: switch             switch on
+SYMBOL: wait-counter
 
 : S1-entry ( trans -- ) drop                 "S1:entry " write
     1 wait-counter set ;
@@ -159,10 +159,10 @@ set-transitions
 ! from   to    event        guard condition  action
 
 S1-1 {
-    {    f     state-entry   f                S1-1-entry        }
-    {    f     state-do      f                S1-1-do           }
-    {    f     state-exit    f                S1-1-exit         }
-    {    S1-2  E4            f                S1-1->S1-2-action }
+    {    f     state-entry   f               S1-1-entry        }
+    {    f     state-do      f               S1-1-do           }
+    {    f     state-exit    f               S1-1-exit         }
+    {    S1-2  E4            f               S1-1->S1-2-action }
 }
 set-transitions
 
