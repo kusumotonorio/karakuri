@@ -204,7 +204,7 @@ FSM1 { { sub-fsm: t } } preview-fsm" }
 The state machine in karakuri is quite similar to that in UML. However, Graphviz does not render state hierarchies well, so it has its own representation of hierarchy.
 "
 "
-Wrie event handlers.
+Write event handlers.
 "
 { $code
 "USING: kernel accessors namespaces arrays io math formatting
