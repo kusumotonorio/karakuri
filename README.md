@@ -30,7 +30,7 @@ S1 { FSM2 } set-sub-fsms         ! equivalent: S1 FSM2 set-sub-fsm
 FSM2 { S1-1 S1-2 } set-states
 ```
 
-If Graphviz is installed, FSM can be confirmed by visualizing whether it was configured as intended.
+If Graphviz is installed, these FSMs can be confirmed by visualizing whether it was configured as intended.
 
 ```
 USE: karakuri.tools
