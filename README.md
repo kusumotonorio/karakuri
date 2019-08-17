@@ -177,13 +177,13 @@ S1-2 {
 set-transitions
 ```
 
-If you write f for the first element of an array that represents information about a transition, it represents an internal transition. If it is the same as the from state, it represents a self transition.
+If you write ```f``` for the first element of an array that represents information about a transition, it represents an internal transition. If it is the same as the from state, it represents a self transition.
 
-The second element is the event where the transition occurs. If you write this as f, it means unconditional.
+The second element is the event where the transition occurs. If you write this as ```f```, it means unconditional.
 
-However, all transitions require the guard condition of the third element to be met. If the third element is f, there is no guard condition.
+However, all transitions require the guard condition of the third element to be met. If the third element is ```f```, there is no guard condition.
 
-The fourth element is the action performed during the transition. If this is written as f, it is interpreted as having no action.
+The fourth element is the action performed during the transition. If this is written as ```f```, it is interpreted as having no action.
 
 The ```state-entry```, ```state-do```, and ```state-exit``` are special events, each representing when a state is entered, while it is in, and when it is exited.
 
