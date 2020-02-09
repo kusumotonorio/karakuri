@@ -260,12 +260,7 @@ PRIVATE>
             [ start-state>> exec-state-entry ]
             [ dup start-state>> swap state<< ]
             [ dup start-state>> name>> swap set-model ]
-            [
-                states>> [
-                    get-global sub-fsms>> [
-                        initialise-fsm
-                    ] each
-                ] each ]
+            [ states>> [ get-global sub-fsms>> [ initialise-fsm ] each ] each ]
         } cleave
     ] when ;
 
