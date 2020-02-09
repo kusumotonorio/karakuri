@@ -1,11 +1,12 @@
 ! Copyright (C) 2019 KUSUMOTO Norio.
 ! See http://factorcode.org/license.txt for BSD license.
 
-USING: kernel sequences arrays locals namespaces accessors generic
-       assocs combinators combinators.short-circuit classes.tuple
-       formatting classes prettyprint strings help
-       graphviz graphviz.notation graphviz.render graphviz.dot
-       karakuri karakuri.help karakuri.private ;
+USING:
+    kernel sequences arrays locals namespaces accessors generic
+    assocs combinators combinators.short-circuit classes.tuple
+    formatting classes prettyprint strings help
+    graphviz graphviz.notation graphviz.render graphviz.dot
+    karakuri karakuri.help karakuri.private ;
 
 IN: karakuri.tools
 
@@ -100,9 +101,11 @@ SYMBOL: state-members
     state-symbol get-global transitions>>
     [| trans-obj |
         trans-obj exit-chain>> empty? [ ! internal transition
-            trans-obj event>> { [ state-entry = not ]
-                                [ state-do = not ]
-                                [ state-exit = not ] } 1&& [
+            trans-obj event>> {
+                [ state-entry = not ]
+                [ state-do = not ]
+                [ state-exit = not ]
+            } 1&& [
                 trans-obj event-label "%s\n" sprintf s-label push
             ] when
         ] when
@@ -151,8 +154,7 @@ SYMBOL: state-members
                 state "%s" sprintf
                 fsm get-global start-state>> "%s" sprintf
                 [->
-                    fsm "cluster_%s"
-                    sprintf =lhead "back" =dir
+                    fsm "cluster_%s" sprintf =lhead "back" =dir
                     "odiamond" =arrowtail "true" =constraint
                     *graphviz-fontname* get =fontname
                     *graphviz-fontsize* get =fontsize ];
@@ -165,7 +167,8 @@ SYMBOL: state-members
     graph
     fsm-symbol "%s-initial-state" sprintf
     fsm-symbol get-global start-state>> "%s" sprintf
-    [-> "false" =constraint
+    [->
+        "false" =constraint
         *graphviz-labelfloat* get =labelfloat
         *graphviz-fontname* get =fontname
         *graphviz-fontsize* get =fontsize ];
@@ -183,11 +186,11 @@ SYMBOL: state-members
                     [add-node trans-obj to-state>> state-label =label ];
                 ] when
                 trans-obj
-                [ from-state>> "%s" sprintf ]
-                [ to-state>> "%s" sprintf ] bi
+                    [ from-state>> "%s" sprintf ]
+                    [ to-state>> "%s" sprintf ]
+                bi
                 [->
-                    trans-obj
-                    event-label =label
+                    trans-obj event-label =label
                     "true" =constraint
                     *graphviz-labelfloat* get =labelfloat
                     *graphviz-fontname* get =fontname

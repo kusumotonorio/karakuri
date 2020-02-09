@@ -2,10 +2,10 @@
 ! See http://factorcode.org/license.txt for BSD license.
 
 USING:
-accessors kernel sequences arrays words.symbol models namespaces
-locals words strings quotations math fry classes.parser lists
-generic assocs classes.singleton lexer combinators continuations
-combinators.short-circuit classes classes.tuple parser ;
+    accessors kernel sequences arrays words.symbol models namespaces
+    locals words strings quotations math fry classes.parser lists
+    generic assocs classes.singleton lexer combinators continuations
+    combinators.short-circuit classes classes.tuple parser ;
 
 IN: karakuri
 
@@ -72,25 +72,28 @@ PRIVATE>
 SYNTAX: FSMS: ";"
     [
         create-word-in
-        [ reset-generic ]
-        [ define-symbol ]
-        [ <fsm> swap set-global ] tri
+            [ reset-generic ]
+            [ define-symbol ]
+            [ <fsm> swap set-global ]
+        tri
     ] each-token ;
 
 SYNTAX: STATES: ";"
     [
         create-word-in
-        [ reset-generic ]
-        [ define-symbol ]
-        [ fsm-state new swap set-global ] tri
+            [ reset-generic ]
+            [ define-symbol ]
+            [ fsm-state new swap set-global ]
+        tri
     ] each-token ;
 
 SYNTAX: EVENTS: ";"
     [
         create-word-in
-        [ reset-generic ]
-        [ define-symbol ]
-        [ fsm-event new swap set-global ] tri
+            [ reset-generic ]
+            [ define-symbol ]
+            [ fsm-event new swap set-global ]
+        tri
     ] each-token ;
 
 : set-memory-type ( fsm-symbol ? -- )
@@ -98,9 +101,10 @@ SYNTAX: EVENTS: ";"
 
 :: set-states ( fsm-symbol state-symbols  -- )
     state-symbols
-    [ fsm-symbol get-global states<< ]
-    [ first fsm-symbol get-global start-state<< ]
-    [ [ fsm-symbol swap get-global super-fsm<< ] each ] tri ;
+        [ fsm-symbol get-global states<< ]
+        [ first fsm-symbol get-global start-state<< ]
+        [ [ fsm-symbol swap get-global super-fsm<< ] each ]
+    tri ;
 
 :: set-sub-fsms ( state-symbol sub-fsms -- )
     sub-fsms state-symbol get-global sub-fsms<<
@@ -134,10 +138,10 @@ SYNTAX: EVENTS: ";"
 :: setup-transition ( from-state trans-define -- trans-obj )
     from-state dup trans-define first4
     fsm-transition new
-    swap dup [ drop action-none ] unless >>action
-    swap dup [ drop guard-none ] unless >>guard
-    swap dup [ drop event-always ] unless >>event
-    swap dup [ drop undefined-state ] unless >>to-state
+    swap [ action-none ] unless* >>action
+    swap [ guard-none ] unless* >>guard
+    swap [ event-always ] unless* >>event
+    swap [ undefined-state ] unless* >>to-state
     swap >>from-state
     swap get-global super-fsm>> >>fsm ;
 
@@ -260,7 +264,9 @@ PRIVATE>
             [ start-state>> exec-state-entry ]
             [ dup start-state>> swap state<< ]
             [ dup start-state>> name>> swap set-model ]
-            [ states>> [ get-global sub-fsms>> [ initialise-fsm ] each ] each ]
+            [ states>> [
+                  get-global sub-fsms>> [ initialise-fsm ] each ]
+              each ]
         } cleave
     ] when ;
 
@@ -269,8 +275,9 @@ PRIVATE>
     super-fsm>> get-global memory-type?>> not [
         state-symbol get-global sub-fsms>> [
             get-global state>>
-            [ exec-state-exit-sub-fsms ]
-            [ exec-state-exit ] bi
+                [ exec-state-exit-sub-fsms ]
+                [ exec-state-exit ]
+            bi
         ] each
     ] when ;
 
@@ -294,16 +301,19 @@ PRIVATE>
               } cleave
           ] each ]
         [ exit-chain>> empty? not [
-              trans-obj to-state>> get-global sub-fsms>> [ initialise-fsm ] each
+              trans-obj to-state>> get-global sub-fsms>> [
+                  initialise-fsm
+              ] each
           ] when ]
     } cleave ;
 
 :: initial-state->start-state ( fsm-obj -- )
     fsm-obj start-state>> :> start-state
     start-state
-    [ fsm-obj state<< ]
-    [ name>> fsm-obj set-model ]
-    [ exec-state-entry ] tri ;
+        [ fsm-obj state<< ]
+        [ name>> fsm-obj set-model ]
+        [ exec-state-entry ]
+    tri ;
 
 : set-transitioned ( fsm-symbol -- )
     get-global t swap transitioned?<< ; inline
@@ -321,17 +331,20 @@ PRIVATE>
     fsm-obj state>> initial-state = [
         fsm-obj initial-state->start-state
     ] when
-    fsm-obj state>>
-    [ exec-state-do ]
-    [
+    fsm-obj state>> [
+        exec-state-do
+    ] [
         get-global sub-fsms>> [
-            [
-                get-global fsm-obj
-                [ transitioned?>> swap transitioned?<< ]
-                [ event>> swap event<< ] 2bi ]
-            [ update ]
-            [ get-global transitioned?>> fsm-obj transitioned?<< ] tri
-        ] each ] bi
+                [
+                    get-global fsm-obj
+                        [ transitioned?>> swap transitioned?<< ]
+                        [ event>> swap event<< ]
+                    2bi ]
+                [ update ]
+                [ get-global transitioned?>> fsm-obj transitioned?<< ]
+            tri
+        ] each
+    ] bi
     fsm-obj transitioned?>> not [
         fsm-obj state>> get-global transitions>>
         [| trans-obj |
