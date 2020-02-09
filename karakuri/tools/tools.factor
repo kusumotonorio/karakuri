@@ -124,9 +124,7 @@ SYMBOL: state-members
     fsm-symbol get-global states>>
     [| state |
         "white" :> color!
-        fsm-symbol get-global state>> state = [
-            "gray" color!
-        ] when
+        fsm-symbol get-global state>> state = [ "gray" color! ] when
         [node
             "box" =shape "rounded,filled" =style color =fillcolor
             *graphviz-fontname* get =fontname

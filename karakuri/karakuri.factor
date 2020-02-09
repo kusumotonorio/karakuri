@@ -108,14 +108,17 @@ SYNTAX: EVENTS: ";"
     sub-fsms [
         state-symbol swap get-global super-state<<
     ] each
-
     state-symbol get-global super-fsm>> :> test-fsm!
     V{ } clone :> super-fsm-chain!
-    [ { [ test-fsm undefined-fsm = not ]
-        [ test-fsm get-global super-state>> undefined-state = not ]
-        [ test-fsm get-global super-state>>
-          get-global super-fsm>> undefined-fsm = not ]
-      } 0&& ] [
+    [
+        {
+            [ test-fsm undefined-fsm = not ]
+            [ test-fsm get-global super-state>> undefined-state = not ]
+            [
+                test-fsm get-global super-state>>
+                get-global super-fsm>> undefined-fsm = not ]
+        } 0&&
+    ] [
         test-fsm super-fsm-chain member? [
             test-fsm state-symbol circular-reference-definition
         ] when
