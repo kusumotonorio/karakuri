@@ -1,6 +1,5 @@
 ! Copyright (C) 2019 KUSUMOTO Norio.
 ! See http://factorcode.org/license.txt for BSD license.
-! ver. 0.2
 
 USING:
 accessors kernel sequences arrays words.symbol models namespaces
@@ -177,7 +176,6 @@ PRIVATE>
         state-symbol trans-define setup-transition :> trans-obj
         trans-obj state-symbol get-global transitions>> swap suffix
         state-symbol get-global transitions<<
-
         trans-obj to-state>> :> e
         trans-obj from-state>> :> s
         V{ } clone :> exit-chain!
@@ -285,9 +283,7 @@ PRIVATE>
     trans-obj
     {
         [ from-state>> exec-state-exit-sub-fsms ]
-        [ exit-chain>> [
-              exec-state-exit
-          ] each ]
+        [ exit-chain>> [ exec-state-exit ] each ]
         [ exec-trans-action ]
         [ entry-chain>> [
               {
@@ -295,20 +291,15 @@ PRIVATE>
                   [ dup get-global super-fsm>> get-global state<< ]
                   [
                       [ name>> ]
-                      [ get-global super-fsm>> get-global ]
-                      bi set-model ]
+                      [ get-global super-fsm>> get-global ] bi set-model ]
                   [
                       get-global super-fsm>> get-global states>> rest [
-                          get-global sub-fsms>> [
-                              initialise-fsm
-                          ] each
+                          get-global sub-fsms>> [ initialise-fsm ] each
                       ] each ]
               } cleave
           ] each ]
         [ exit-chain>> empty? not [
-              trans-obj to-state>> get-global sub-fsms>> [
-                  initialise-fsm
-              ] each
+              trans-obj to-state>> get-global sub-fsms>> [ initialise-fsm ] each
           ] when ]
     } cleave ;
 
@@ -337,16 +328,15 @@ PRIVATE>
     ] when
     fsm-obj state>>
     [ exec-state-do ]
-    [ get-global sub-fsms>> [
-          [
-              get-global fsm-obj
-              [ transitioned?>> swap transitioned?<< ]
-              [ event>> swap event<< ] 2bi ]
-          [ update ]
-          [ get-global transitioned?>> fsm-obj transitioned?<< ] tri
-      ] each
-    ] bi
-
+    [
+        get-global sub-fsms>> [
+            [
+                get-global fsm-obj
+                [ transitioned?>> swap transitioned?<< ]
+                [ event>> swap event<< ] 2bi ]
+            [ update ]
+            [ get-global transitioned?>> fsm-obj transitioned?<< ] tri
+        ] each ] bi
     fsm-obj transitioned?>> not [
         fsm-obj state>> get-global transitions>>
         [| trans-obj |
