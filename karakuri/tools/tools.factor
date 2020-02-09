@@ -99,7 +99,7 @@ SYMBOL: state-members
     ] each
     state-symbol get-global transitions>>
     [| trans-obj |
-        trans-obj exit-chain>> { } = [ ! internal transition
+        trans-obj exit-chain>> empty? [ ! internal transition
             trans-obj event>> { [ state-entry = not ]
                                 [ state-do = not ]
                                 [ state-exit = not ] } 1&& [
@@ -174,7 +174,7 @@ SYMBOL: state-members
     fsm-symbol get-global states>> [
         get-global transitions>>
         [| trans-obj |
-            trans-obj exit-chain>> { } = not [
+            trans-obj exit-chain>> empty? not [
                 trans-obj to-state>> state-members get member? not [
                     [node
                         "box" =shape "rounded,filled" =style

@@ -302,7 +302,7 @@ PRIVATE>
                       ] each ]
               } cleave
           ] each ]
-        [ exit-chain>> { } = not [
+        [ exit-chain>> empty? not [
               trans-obj to-state>> get-global sub-fsms>> [
                   initialise-fsm
               ] each
